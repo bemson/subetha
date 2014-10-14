@@ -29,6 +29,10 @@
       STATE_PENDING = 2,
       STATE_READY = 3,
       STATE_CLOSING = 4,
+      JOIN_EVENT = '::join',
+      DROP_EVENT = '::drop',
+      CONNECT_EVENT = '::connect',
+      DISCONNECT_EVENT = '::disconnect',
       // tests whether a string looks like a domain
       /*
       should pass:
@@ -147,7 +151,7 @@
           msg: <uri>            [msg]
         }
         */
-        ready: function (bridge, domain) {
+        ready: function (bridge, origin) {
           var
             clients = bridge.clients,
             clientId;
@@ -155,8 +159,8 @@
           // cancel timer
           bridge.dDay();
 
-          // capture domain, for logging clients
-          bridge.domain = domain;
+          // capture bridge origin, for logging?
+          bridge.origin = origin;
 
           // note that bridge is ready
           bridge.state = STATE_READY;
@@ -181,7 +185,7 @@
               <guid>: {
                 id: <guid>,
                 channel: <channel-name>,
-                domain: <uri>
+                origin: <uri>
               },
               ...
             },       // optional for failures
@@ -250,7 +254,7 @@
           // announce each peer if we have them and we're still ready
           if (hasPeers && client.state === STATE_READY) {
             for (peerId in clientPeers) {
-              client.fire(CONNECT_EVENT, clientPeers[peerId]);
+              client.fire(JOIN_EVENT, clientPeers[peerId]);
             }
           }
         },
@@ -267,7 +271,7 @@
               {
                 id: <guid>,
                 channel: <channel-name>,
-                domain: <uri>,
+                origin: <url>,
                 start: <date>
               },
               ...
@@ -285,6 +289,79 @@
         net: function (bridge, msg) {
           // create unique peers for clients in these channels
           // remove possible "bid" member - to not reveal bridge ids
+          var
+            channelClients,
+            clientId,
+            client,
+            joins = msg.joins,
+            drops = msg.drops,
+            peerData,
+            peerId,
+            peer,
+            ln,
+            changeSets,
+            csLn;
+
+
+          // handle joins
+          ln = joins.length;
+          while (ln--) {
+            // get peer data
+            peerData = joins[ln];
+            peerId = peerData.id;
+
+            // get clients in this channel
+            channelClients = bridge.channels[peerData.channel];
+
+            // add a unique peer instance to each client in this channel
+            for (clientId in channelClients) {
+              if (clientId != peerId) {
+                addPeerToClient(channelClients[clientId], peerData);
+              }
+            }
+
+            // fire connect event on each client
+            for (clientId in channelClients) {
+              if (clientId != peerId) {
+                client = channelClients[clientId];
+                client.fire(JOIN_EVENT, client.peers[peerId]);
+              }
+            }
+          }
+
+          // handle drops
+          ln = drops.length;
+          while (ln--) {
+            changeSets = [];
+            // get peer data
+            peerData = drops[ln];
+            peerId = peerData.id;
+
+            // get clients in this channel
+            channelClients = bridge.channels[peerData.channel];
+
+            // remove peer from each client in this channel
+            for (clientId in channelClients) {
+              if (clientId != peerId) {
+                client = channelClients[clientId];
+                peer = client.peers[peerId];
+                changeSets.push([client, peer]);
+                // set client state
+                peer.state = 0;
+                delete client.peers[peerId];
+              }
+            }
+
+            // fire connect event on each client, passing the removed peer
+            csLn = changeSets.length;
+            while (csLn--) {
+              client = changeSets[csLn][0];
+              if (client.id != peerId) {
+                client.fire(DROP_EVENT, changeSets[csLn][1]);
+              }
+            }
+          }
+
         },
 
         // handle killed bridge
@@ -302,98 +379,6 @@
           bridge.deref();
           // notify clients
           bridge.destroy();
-        },
-
-        // add peers to bridge
-        /*
-        data structure
-        {                           [payload]
-          mid: <guid>,
-          type: "join",
-          sent: <date>,
-          msg: {                    [msg]
-            id: <guid>,
-            channel: <channel-name>,
-            domain: <uri>,
-            start: <date>
-          }
-        }
-        */
-        join: function (bridge, peerData) {
-          var
-            peerId = peerData.id,
-            channelClients,
-            clientId,
-            client;
-
-          // exit if peer is invalid
-          if (
-            !isFullString(peerId) ||
-            !isFullString(peerData.channel) ||
-            !isFullString(peerData.domain) ||
-            !isFullString(peerData.start)
-          ) {
-            return;
-          }
-
-          // get clients in this channel
-          channelClients = bridge.channels[peerData.channel];
-
-          // add unique peer instance per client in the same channel
-          for (clientId in channelClients) {
-            addPeerToClient(channelClients[clientId], peerData);
-          }
-
-          // fire connect event per client
-          for (clientId in channelClients) {
-            client = channelClients[clientId];
-            client.fire(CONNECT_EVENT, client.peers[peerId]);
-          }
-        },
-
-        // remove client from bridge
-        /*
-        data structure
-        {                           [payload]
-          mid: <guid>,
-          type: "drop",
-          sent: <date>,
-          msg: {                    [msg]
-            id: <guid>,
-            channel: <channel-name>
-          }
-        }
-        */
-        drop: function (bridge, msg) {
-          var
-            peerId = msg.id,
-            channelClients,
-            clientId,
-            client;
-
-          // exit if peer is invalid
-          if (
-            !isFullString(peerId) ||
-            !isFullString(peerData.channel) ||
-            !isFullString(peerData.domain) ||
-            !isFullString(peerData.start)
-          ) {
-            return;
-          }
-
-          // get clients in this channel
-          channelClients = bridge.channels[peerData.channel];
-
-          // add unique peer instance per client in the same channel
-          for (clientId in channelClients) {
-            addPeerToClient(channelClients[clientId], peerData);
-          }
-
-          // fire connect event on each client
-          for (clientId in channelClients) {
-            client = channelClients[clientId];
-            client.fire(CONNECT_EVENT, client.peers[peerId]);
-          }
         },
 
         // pass-thru client message
@@ -423,7 +408,7 @@
 
           // exit when there are no handlers or this type has no handler
           if (
-            typeof handlers !== 'object' &&
+            typeof handlers !== 'object' ||
             !protoHas.call(handlers, msg.type)
           ) {
             return;
@@ -704,14 +689,14 @@
         // clear peers
         client.peers = {};
         if (oldState > STATE_PENDING) {
-          client.fire('::disconnect');
+          client.fire(DISCONNECT_EVENT);
         } else {
           client.fire('::closed');
         }
       }
 
       if (newState === STATE_READY) {
-        client.fire('::connect');
+        client.fire(CONNECT_EVENT);
       }
 
       if (newState === STATE_CLOSING) {
@@ -720,8 +705,8 @@
     }
 
     function addPeerToClient(client, peerData) {
-      // add peer to client
-      return client.peers[peerData.id] = new Peer(peerData);
+      // add peer to client if not the client
+      client.peers[peerData.id] = new Peer(peerData, client);
     }
 
 
@@ -730,7 +715,7 @@
 
       if (protoHas.call(peers, peerId)) {
         delete peers[peerId];
-        client.fire('::disconnect', peers[peerId]);
+        client.fire(DROP_EVENT, peers[peerId]);
       }
 
     }
@@ -1067,8 +1052,6 @@
 
     mix(Bridge.prototype, {
 
-      domain: '',
-
       // number of failed cipher decoding attempts
       failures: 0,
 
@@ -1329,7 +1312,7 @@
     });
 
 
-    function Client (uri) {
+    function Client (channelNetwork) {
       var
         channel,
         network,
@@ -1337,14 +1320,14 @@
         me = this,
         credentials = protoSlice.call(arguments, 1);
 
-      // parse uri into channel and/or network
-      if (isFullString(uri)) {
-        pos = uri.indexOf('@');
+      // parse channelNetwork into channel and/or network
+      if (isFullString(channelNetwork)) {
+        pos = channelNetwork.indexOf('@');
         if (~pos) {
-          channel = uri.substring(0, pos);
-          network = uri.substring(pos + 1);
+          channel = channelNetwork.substring(0, pos);
+          network = channelNetwork.substring(pos + 1);
         } else {
-          channel = uri;
+          channel = channelNetwork;
         }
 
         // use given channel
@@ -1418,7 +1401,7 @@
           args: [...]
         }
         */
-        event: function (client, peer, data, msg, payload, evt) {
+        event: function (client, peer, data, msg, evt) {
           var
             args = data.args,
             eventName = data.name,
@@ -1427,9 +1410,9 @@
               data: [].concat(args),
               id: msg.mid,
               peer: peer,
-              sent: payload.sent,
-              received: payload.received,
-              native: evt
+              sent: msg.sent,
+              received: msg.received,
+              timeStamp: evt.timeStamp
             };
 
           if (args.length) {
@@ -1709,12 +1692,13 @@
     });
 
     // proxy for communicating with a specific peer
-    function Peer(peerData) {
+    function Peer(peerData, client) {
       var me = this;
 
+      me.client = client;
       if (peerData) {
         me.id = peerData.id;
-        me.domain = peerData.domain;
+        me.origin = peerData.origin;
         me.start = new Date(peerData.start);
         me.channel = peerData.channel;
       }
@@ -1722,13 +1706,20 @@
 
     mix(Peer.prototype, {
 
+      // indicates peer is usable
+      state: STATE_READY,
+
       // transmit event to this peer
       send: function (name) {
         var
           peer = this,
           args = arguments;
 
-        return peer._transmitEvent(
+        // exit if peer is disabled
+        if (!peer.state) {
+          return false;
+        }
+        return peer.client._transmitEvent(
           name,
           args.length > 1 ? protoSlice.call(args, 1) : [],
           peer.id

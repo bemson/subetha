@@ -21,7 +21,7 @@ SubEtha Network (se-net)
       peers: {
         <guid>: {
           start: <timestamp>,
-          domain: <url>
+          origin: <url>
         }
       }
     }
@@ -67,13 +67,20 @@ SubEtha Message Bus (se-msg)
       protocolVersionLn = protocolVersion.length,
       protocolVersionLnPlusOne = protocolVersionLn + 1,
 
+      // identification
+      bridgeId = guid(),
+      bridgeIdLn = bridgeId.length,
+      bridgeNetworkName,
+
       // security
       initialized = 0,
       destroyed = 0,
       backtick = '`',
+      lastStamp,
       host = scope.parent,
       speakerKey,
       r_validClientMsg,
+      origin = location.origin || location.protocol + '//' + (location.port ? location.port + ':' : '') + location.hostname,
       storagePfx = protocolVersion + backtick + bridgeId + backtick,
       unsupported =
         // there is no parent
@@ -90,11 +97,6 @@ SubEtha Message Bus (se-msg)
       // versioned localstorage keys
       netKey = protocolVersion + '-net',
       msgKey = protocolVersion + '-msg',
-
-      // identification
-      bridgeId = guid(),
-      bridgeIdLn = bridgeId.length,
-      bridgeNetworkName,
 
       // network tracking
       networkClients = {},
@@ -115,11 +117,12 @@ SubEtha Message Bus (se-msg)
       networkChangeTimer,
 
       // "client" payload
-      clientEventQueue = [],
-      clientEventQueueLocked = 0,
+      relayQueue = [],
+      relayQueueLocked = 0,
 
       // events
       AUTH_EVENT = '::auth',
+      RELAY_EVENT = '::relay',
       MSG_EVENT = '::message',
 
       // RESPONSE CODES
@@ -204,28 +207,31 @@ SubEtha Message Bus (se-msg)
           }
         }
         */
-        client: function (payload) {
+        client: function (payload, evt) {
           var
-            command = payload.msg,
+            msg = payload.msg,
             initialLength;
 
           // only queue if client event has proper structure
           if (
-            // command is an object
-            typeof command === 'object' &&
+            // msg is an object
+            typeof msg === 'object' &&
             // type is a string
-            isFullString(command.type) &&
-            // comes from a local client
-            protoHas.call(bridgeClients, command.from)
+            isFullString(msg.type) &&
+            // comes from a registered client
+            protoHas.call(bridgeClients, msg.from)
           ) {
             // get initial queue length - before adding our event
-            initialLength = clientEventQueue.length;
-            // queue client command
-            clientEventQueue.push(command);
+            initialLength = relayQueue.length;
+            // queue client message
+            relayQueue.push({
+              msg: msg,
+              sent: evt.timeStamp
+            });
             // run queue
-            runClientEventQueue();
+            runRelayQueue();
             // if the newly queued event was handled...
-            if (clientEventQueue.length <= initialLength) {
+            if (relayQueue.length <= initialLength) {
               // return code for "processed"
               return CLIENT_RSP_HANDLED;
             }
@@ -272,8 +278,8 @@ SubEtha Message Bus (se-msg)
             return CLIENT_RSP_MISSING_CHANNEL;
           }
 
-          // add domain to client data
-          clientData.domain = evt.origin;
+          // add url to client data
+          clientData.origin = evt.origin;
           // create request
           request = new AuthRequest(clientData, payload.mid);
 
@@ -353,7 +359,7 @@ SubEtha Message Bus (se-msg)
             joins: [
               {
                 id: <guid>,
-                domain: <uri>,
+                origin: <uri>,
                 channel: <channel-name>,
                 start: <date>,
                 bid: <guid>
@@ -440,8 +446,9 @@ SubEtha Message Bus (se-msg)
           }
         }
         */
-        client: function () {
-          // relay to host if it has recipients
+        client: function (msg) {
+          // relay to host
+          relayToHost(msg);
         }
 
       },
@@ -600,7 +607,7 @@ SubEtha Message Bus (se-msg)
           if (!destroyed) {
             // listen for when the page closes
             bind(scope, 'unload', bridge.destroy);
-            msgHost('ready', location.origin);
+            msgHost('ready', origin);
           }
         }
       }
@@ -679,12 +686,49 @@ SubEtha Message Bus (se-msg)
       LS.setItem(msgKey, storagePfx + JSONstringify({
         type: type,
         bid: bridgeId,
-        msg: msg
+        msg: msg,
+        r: lastStamp
       }));
     }
 
+    function relayToHost(msg, channelName) {
+      var
+        viaNetwork = 0,
+        fromId,
+        bridgeCnt;
+
+      if (!channelName) {
+        fromId = msg.from;
+        if (!protoHas.call(networkClients, fromId)) {
+          // don't relay unknown network clients
+          return;
+        }
+        channelName = networkClients[msg.from].channel;
+        viaNetwork = !protoHas.call(bridgeClients, fromId);
+      }
+      // announce joins & drops now, in case a (network) client is supposed to receive this relay
+      broadcastNetworkChanges();
+      bridgeCnt = bridgeChannelCnts[channelName];
+      // send to host when a target client is local or unspecified
+      if (
+        (
+          !msg.to &&
+          (
+            (viaNetwork && bridgeCnt) ||
+            (!viaNetwork && bridgeCnt > 1)
+          )
+        ) ||
+        (
+          msg.to &&
+          hasBridgeClient(msg.to)
+        )
+      ) {
+        msgHost('client', msg);
+      }
+    }
+
     // send message to host
-    function msgHost(type, msg) {
+    function msgHost(type, msg, sent) {
       postMessage(
         // protocol message
         [
@@ -700,7 +744,7 @@ SubEtha Message Bus (se-msg)
             JSONstringify({
               mid: guid(),
               type: type,
-              sent: new Date(),
+              sent: sent || new Date(),
               msg: msg
             }) +
             // random tail padding
@@ -711,6 +755,16 @@ SubEtha Message Bus (se-msg)
       );
       // alter cipher per message
       cipher.shift++;
+    }
+
+    function hasBridgeClient(ids) {
+      var i = ids.length;
+      while (i--) {
+        if (protoHas.call(bridgeClients, ids[i])) {
+          return 1;
+        }
+      }
+      return 0;
     }
 
     // ensures request methods are only invoked once
@@ -761,43 +815,35 @@ SubEtha Message Bus (se-msg)
     // allows handling next client event
     function unlockAndRunQueue() {
       // unlock queue
-      clientEventQueueLocked = 0;
+      relayQueueLocked = 0;
       // resume queue next
-      next(runClientEventQueue());
+      next(runRelayQueue());
     }
 
     // process next client event
-    function runClientEventQueue() {
-      var
-        item,
-        request;
+    function runRelayQueue() {
+      var request;
 
       // exit if queue is closed or there are no messages to relay
-      if (clientEventQueueLocked || !clientEventQueue.length) {
+      if (relayQueueLocked || !relayQueue.length) {
         return;
       }
 
       // lock queue
-      clientEventQueueLocked = 1;
-      // take command off queue
-      item = clientEventQueue.shift();
-      // create client message request
-      request = new RelayRequest(item);
-      if (bridge.autoRelay) {
+      relayQueueLocked = 1;
+      // take command off queue and create client message request
+      request = new RelayRequest(relayQueue.shift());
+      if (
+        !protoHas.call(bridge, '_evts') ||
+        !protoHas.call(bridge._evts, RELAY_EVENT) ||
+        !bridge._evts[RELAY_EVENT].length
+      ) {
         request.allow();
       } else {
         wrapRequestMethods(request);
 
-        bridge.relayRequest = request;
-
         // announce client event request
-        bridge.fire('::message', request);
-
-        // if not handled and not on hold...
-        if (!request.handled() && !request.async()) {
-          // allow request
-          request.allow();
-        }
+        bridge.fire(RELAY_EVENT, request);
       }
     }
 
@@ -866,7 +912,7 @@ SubEtha Message Bus (se-msg)
           }
         }
         // store network channels
-        LS.setItem(netKey, JSON.stringify(allClients));
+        LS.setItem(netKey, JSONstringify(allClients));
 
         payload = {
           joins: joins,
@@ -993,6 +1039,9 @@ SubEtha Message Bus (se-msg)
         mid,
         securedByRegExp = 0,
         code = CLIENT_RSP_MISSING_COMMAND;
+
+      // capture to cache-bust db changes
+      lastStamp = evt.timeStamp;
 
       // parser
       if (
@@ -1282,19 +1331,27 @@ SubEtha Message Bus (se-msg)
     });
 
     // manage request to relay client events
-    function RelayRequest(evt) {
+    function RelayRequest(pkg) {
       var me = this;
-      me.event = evt;
-      me.command = evt.msg;
+      me.sent = pkg.sent;
+      me.msg = pkg.msg;
     }
 
     mix(RelayRequest.prototype, {
 
       allow: function () {
-        // process message locally
-        postMessageCommands[dataType](data.msg, data.mid, evt);
-        // relay message to network
-        broadcast('client', data);
+        var
+          me = this,
+          msg = me.msg,
+          sender = bridgeClients[msg.from],
+          channelName = sender.channel;
+
+        // only relay if there are other clients in this channel
+        if (networkChannelCnts[channelName] > 1) {
+          relayToHost(msg);
+          // relay message to network
+          broadcast('client', msg);
+        }
         unlockAndRunQueue();
       },
 
@@ -1311,7 +1368,7 @@ SubEtha Message Bus (se-msg)
       if (clientData) {
         me.id = clientData.id;
         me.channel = clientData.channel;
-        me.domain = clientData.domain;
+        me.origin = clientData.origin;
       }
 
     }

@@ -11,20 +11,36 @@
   <script src="../../morus/morus.min.js"></script>
   <script src="subetha-client.js"></script>
   <script type="text/javascript">
-  var x = new Subetha.Client('images');
-  x.on('::readyStateChange', function (newValue, oldValue) {
-    console.log('state changed from', oldValue, 'to', newValue);
-  });
+  var
+    x = new Subetha.Client('images'),
+    y = new Subetha.Client('images');
+
   x.on('::connect', function () {
-    console.log('connected!');
-    setTimeout(function () {
-      // x.close();
-    }, 5000);
+    x.send('hello', 'world!');
   });
-  x.on('::disconnect', function () {
-    console.log('disconnected!');
+  x.on('::join', function (peer) {
+    console.log('a client connected to X!', peer);
   });
+  x.on('::drop', function (peer) {
+    console.log('a client disconnected from X!', peer);
+  });
+  x.on('goodbye!', function (e, phrase) {
+    console.log('goodbye! event:', phrase);
+  });
+
+  y.on('hello', function (e, phrase) {
+    console.log('hello event:', phrase);
+    e.peer.send('goodbye!', 'my love ' + Math.random());
+  });
+  y.on('::join', function (peer) {
+    console.log('a client connected to Y!', peer);
+  });
+  y.on('::drop', function (peer) {
+    console.log('a client disconnected from Y!', peer);
+  });
+
   x.open();
+  y.open();
   </script>
 </head>
 <body>
