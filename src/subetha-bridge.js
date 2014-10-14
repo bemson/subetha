@@ -80,6 +80,11 @@ SubEtha Message Bus (se-msg)
       host = scope.parent,
       speakerKey,
       r_validClientMsg,
+      r_validStorageEvent = new RegExp(
+        protocolVersion + backtick +
+        '[0-9a-f-]{36}' + backtick +
+        '\\d+' + '\\{.+\\}$'
+      ),
       origin = location.origin || location.protocol + '//' + (location.port ? location.port + ':' : '') + location.hostname,
       storagePfx = protocolVersion + backtick + bridgeId + backtick,
       unsupported =
@@ -683,11 +688,10 @@ SubEtha Message Bus (se-msg)
 
     // share message with network
     function broadcast(type, msg) {
-      LS.setItem(msgKey, storagePfx + JSONstringify({
+      LS.setItem(msgKey, storagePfx + lastStamp + JSONstringify({
         type: type,
         bid: bridgeId,
-        msg: msg,
-        r: lastStamp
+        msg: msg
       }));
     }
 
@@ -1096,8 +1100,7 @@ SubEtha Message Bus (se-msg)
     function localStorageRouter(evt) {
       var
         key = evt.key,
-        msg = evt.newValue,
-        pos;
+        msg = evt.newValue;
 
       // exit when...
       if (
@@ -1105,24 +1108,14 @@ SubEtha Message Bus (se-msg)
         key != msgKey ||
         // value is not a string
         typeof msg != 'string' ||
-        // does not end as JSON object
-        msg.charAt(msg.length - 1) != '}' ||
-        // has incorrect protocol
-        msg.substring(0, protocolVersionLn) != protocolVersion ||
-        // there is no backtick after the protocol-version - "+ 1" accounts for inconsequential character (a backtick)
-        !~(pos = msg.indexOf(backtick, protocolVersionLnPlusOne)) ||
-        // the gap between backticks has the expected number of characters
-        pos - protocolVersionLnPlusOne != bridgeIdLn ||
-        // the substring is this bridge
-        msg.substring(protocolVersionLnPlusOne, pos) == bridgeId ||
-        // body does not begin as a JSON object
-        msg.charAt(++pos) != '{'
+        // string is invalid
+        !r_validStorageEvent.test(msg)
       ) {
         return;
       }
 
       // extract "body" of message
-      msg = msg.substring(pos);
+      msg = msg.substring(msg.indexOf('{'));
 
       // exit on parse error
       try {
