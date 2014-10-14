@@ -62,14 +62,9 @@ SubEtha Message Bus (se-msg)
       guidPattern = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx',
       rxp_guid = /[xy]/g,
 
-      // version info
+      // version & identification
       protocolVersion = 'se-0',
-      protocolVersionLn = protocolVersion.length,
-      protocolVersionLnPlusOne = protocolVersionLn + 1,
-
-      // identification
       bridgeId = guid(),
-      bridgeIdLn = bridgeId.length,
       bridgeNetworkName,
 
       // security
