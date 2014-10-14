@@ -532,6 +532,13 @@
       }
     }
 
+    function removeEthaDiv() {
+      if (docBody.contains(ethaDiv)) {
+        // remove ethaDiv from DOM
+        docBody.removeChild(ethaDiv);
+      }
+    }
+
     // routes all post messages to active bridges
     function bridgeRouter(evt) {
       var
@@ -1017,9 +1024,10 @@
         JSONstringify(cipher.map)
       ].join('`');
 
-      // if not already enabled, subscribe to message events
+      // if not already enabled, subscribe to events
       if (!bridgeCnt++) {
         bind(scope, 'message', bridgeRouter);
+        bind(scope, 'unload', removeEthaDiv);
       }
 
       // scope iframe!onload handler to this instance
@@ -1170,10 +1178,9 @@
         if (!--bridgeCnt) {
           // stop listening for messages
           unbind(scope, 'message', bridgeRouter);
-          if (docBody.contains(ethaDiv)) {
-            // remove ethaDiv from DOM
-            docBody.removeChild(ethaDiv);
-          }
+          // stop listening for unload
+          unbind(scope, 'unload', removeEthaDiv);
+          removeEthaDiv();
         }
 
         if (ethaDiv.contains(iframe)) {
