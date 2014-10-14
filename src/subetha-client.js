@@ -1702,7 +1702,7 @@
     function Peer(peerData, client) {
       var me = this;
 
-      me.client = client;
+      me._client = client;
       if (peerData) {
         me.id = peerData.id;
         me.origin = peerData.origin;
@@ -1726,7 +1726,7 @@
         if (!peer.state) {
           return false;
         }
-        return peer.client._transmitEvent(
+        return peer._client._transmitEvent(
           name,
           args.length > 1 ? protoSlice.call(args, 1) : [],
           peer.id
@@ -1737,7 +1737,7 @@
       ask: function () {
         var
           peer = this,
-          client = peer.client;
+          client = peer._client;
 
         return startExchange(client, arguments, [peer.id]) || false;
       }
