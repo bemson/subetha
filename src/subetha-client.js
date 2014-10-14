@@ -228,7 +228,7 @@
           }
 
           // clear peers
-          client.peers = {};
+          clientPeers = client.peers = {};
           // add pre-existing peers
           for (peerId in networkPeers) {
             hasPeers = 1;
