@@ -23,7 +23,6 @@
       rxp_guid = /[xy]/g,
       guidPattern = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx',
       speakerKey = mathRandom(),
-      exchangeDelimiter = '~',
       STATE_INITIAL = 0,
       STATE_QUEUED = 1,
       STATE_PENDING = 2,
@@ -114,22 +113,6 @@
         Array.isArray :
         function (obj) {
           return obj instanceof Array;
-        },
-      objectKeys = typeof Object.keys === 'function' ?
-        Object.keys :
-        function (obj) {
-          var
-            ary = [],
-            key;
-
-          if (obj && typeof obj === 'object') {
-            for (key in obj) {
-              if (protoHas.call(obj, key)) {
-                ary.push(key);
-              }
-            }
-          }
-          return ary;
         },
 
       /*
@@ -374,7 +357,7 @@
           msg: <code-number>           [msg]
         }
         */
-        die: function (bridge, code) {
+        die: function (bridge) {
           // remove from bridge now, so this bridge can't be reused by a reopening client
           bridge.deref();
           // notify clients
@@ -400,8 +383,9 @@
           var
             clients = bridge.clients,
             peerId = msg.from,
-            handlers = Client.prototype.msgs,
+            handlers = Client.msgs,
             handler,
+            msgData,
             clientId,
             clientsLn,
             targetClients;
@@ -416,6 +400,7 @@
 
           handler = handlers[msg.type];
           targetClients = msg.to;
+          msgData = msg.data;
 
           if (targetClients) {
             clientsLn = targetClients.length;
@@ -426,7 +411,8 @@
                 targetClients[clientsLn],
                 peerId,
                 handler,
-                msg.data,
+                msgData,
+                msg,
                 payload,
                 evt
               );
@@ -439,7 +425,8 @@
                 clientId,
                 peerId,
                 handler,
-                msg.data,
+                msgData,
+                msg,
                 payload,
                 evt
               );
@@ -455,6 +442,9 @@
         // number of seconds to wait for the bridge to connect
         bridgeDelay: 8000,
 
+        // expose guid function
+        guid: guid,
+
         // path to script for generated bridge
         bridgeScript: 'subetha-bridge.js',
 
@@ -464,7 +454,15 @@
 
         version: '0.0.0',
 
-        protocol: protocolVersion
+        protocol: protocolVersion,
+
+        states: {
+          INITIAL: STATE_INITIAL,
+          QUEUED: STATE_QUEUED,
+          PENDING: STATE_PENDING,
+          READY: STATE_READY,
+          CLOSING: STATE_CLOSING
+        }
 
       }
     ;
@@ -512,6 +510,16 @@
 
     function isFullString(value) {
       return value && typeof value === 'string';
+    }
+
+    function allStrings(ary) {
+      var i = ary.length;
+      while (i--) {
+        if (!isFullString(ary[i])) {
+          return 0;
+        }
+      }
+      return 1;
     }
 
     // FUNCTIONS
@@ -660,7 +668,10 @@
     }
 
     function checkAndSendCustomEvent(clients, clientId, peerId, handler, data, msg, payload, evt) {
-      var client;
+      var
+        peer,
+        client,
+        customEvent;
 
       // this logic prevents a client from messaging itself
       if (
@@ -669,10 +680,32 @@
         // client has peer
         protoHas.call((client = clients[clientId]).peers, peerId)
       ) {
-        handler(client, client.peers[peerId], data, msg, payload, evt);
+        peer = client.peers[peerId];
+        customEvent = {
+          type: data.type,
+          data: [].concat(data.data),
+          id: payload.mid,
+          peer: peer,
+          sent: payload.sent,
+          received: payload.received,
+          timeStamp: evt.timeStamp
+        };
+        handler(client, peer, data, msg, payload, customEvent);
       }
     }
 
+
+    function transmitEvent(client, type, args, peers) {
+      return !!isFullString(type) &&
+        client._transmit(
+          'event',
+          {
+            type: type,
+            data: args.length > 1 ? [].concat(args) : []
+          },
+          peers ? [].concat(peers) : 0
+        );
+    }
 
     function setClientState(client, newState) {
       var oldState = client.state;
@@ -714,180 +747,6 @@
     function addPeerToClient(client, peerData) {
       // add peer to client if not the client
       client.peers[peerData.id] = new Peer(peerData, client);
-    }
-
-
-    function removeClientPeer(client, peerId) {
-      var peers = client.peers;
-
-      if (protoHas.call(peers, peerId)) {
-        delete peers[peerId];
-        client.fire(DROP_EVENT, peers[peerId]);
-      }
-
-    }
-
-    function parseExchangeArgs(args) {
-      var
-        i = 0,
-        el,
-        elType,
-        argLn = args.length,
-        fnc,
-        evts = [],
-        exCfg = {
-          // set as falsy now, for faster resolution
-          cb:0
-        };
-
-      for (; i < argLn; i++) {
-        el = args[i];
-        elType = typeof el;
-        if (el && elType === 'string') {
-          evts[evts.length] = el;
-        } else if (
-          elType === 'function' &&
-          !fnc &&
-          i + 1 === argLn
-        ) {
-          exCfg.cb = fnc = el;
-        } else {
-          return 0;
-        }
-      }
-
-      if (evts.length) {
-        exCfg.chain = exchangeDelimiter + evts.join(exchangeDelimiter);
-        return exCfg;
-      }
-    }
-
-    function startExchange(client, args, peers) {
-      var
-        exchange,
-        xid,
-        type = args[0],
-        thread,
-        peerLn = peers.length;
-
-      if (
-        peerLn &&
-        isFullString(type)
-      ) {
-
-        // exchange identifier
-        xid = guid();
-
-        // send exchange to peers
-        // exit if send fails
-        if (
-          !client._transmit(
-            'exchange',
-            {
-              xid: xid,
-              idx: 0,
-              type: type,
-              params: protoSlice.call(arguments, 1)
-            },
-            peers
-          )
-        ) {
-          return;
-        }
-
-        setUpExchange(client);
-        exchange = client._ex.xids[xid] = {
-          pids: {},
-          cnt: peerLn
-        };
-        thread = exchangeDelimiter + type;
-        // track exchange with each peer
-        while (peerLn--) {
-          exchange.pids[peers[peerLn]] = {
-            thread: thread,
-            idx: 0
-          };
-        }
-        return xid;
-      }
-    }
-
-    function AddThreadToPeerExchange(client, xid, pid, evt) {
-      var
-        exchange,
-        peerExchange
-      ;
-
-      setUpExchange(client);
-
-      if (protoHas.call(client._ex.xids, xid)) {
-        exchange = client._ex.xids[xid];
-      } else {
-        exchange = client._ex.xids[xid] = {
-          pids: {},
-          cnt: 0
-        };
-      }
-      if (protoHas.call(exchange.pids, pid)) {
-        peerExchange = exchange.pids[pid];
-      } else {
-        peerExchange =
-        exchange.pids[pid] =
-          {
-            thread: '',
-            idx: -1
-          };
-        exchange.cnt++;
-      }
-      peerExchange.thread += exchangeDelimiter + evt;
-      peerExchange.idx++;
-
-      return exchange;
-    }
-
-    function setUpExchange(client) {
-      if (!protoHas.call(client, '_ex')) {
-        client._ex = {
-          xids: {},
-          chains: {}
-        };
-        // ensure all exchanges are exited properly before closing the connection
-        client.on('::closing', tearDownExchange);
-      }
-    }
-
-    function tearDownExchange() {
-      var
-        client = this,
-        exchanges = client._ex.xids,
-        xid
-      ;
-
-      delete client._ex;
-      client.off('::closing', tearDownExchange);
-
-      if (client.state > STATE_PENDING) {
-        // for each active exchange
-        for (xid in exchanges) {
-          // end conversation with active peers
-          client._transmit(
-            'exchange',
-            {
-              xid: xid,
-              xkill: 1
-            },
-            objectKeys(exchanges[xid].pids)
-          );
-        }
-      }
-    }
-
-    function endExchange(client, xid, exchange) {
-      delete client._ex[xid];
-      // announce exchange is over, if it existed
-      if (exchange) {
-        client.fire('::endExchange', exchange.thread);
-      }
     }
 
     // CLASSES
@@ -1375,152 +1234,6 @@
 
       channel: defaultChannel,
 
-      // collection of client types this client can process
-      /*
-      handler signature
-        1. receiving client instance
-        2. sending peer instance
-        3. data (in msg)
-        4. msg (in payload)
-        5. payload (decoded from event)
-        6. native post-message event
-
-      data structure
-      {                           [payload]
-        mid: <guid>,
-        type: "client",
-        sent: <date>,
-        msg: {                    [msg]
-          type: "event",
-          from: <guid>,
-          to: [<guid>, ...],
-          data: <event-data>      [data] *optional
-        }
-      }
-      */
-      msgs: {
-
-        // handle client event
-        /*
-        event-data structure
-        {                       [data]
-          name: <event-name>,
-          args: [...]
-        }
-        */
-        event: function (client, peer, data, msg, evt) {
-          var
-            args = data.args,
-            eventName = data.name,
-            cevt = {
-              type: eventName,
-              data: [].concat(args),
-              id: msg.mid,
-              peer: peer,
-              sent: msg.sent,
-              received: msg.received,
-              timeStamp: evt.timeStamp
-            };
-
-          if (args.length) {
-            client.fire.apply(client, [eventName, cevt].concat(args));
-          } else {
-            client.fire(eventName, cevt);
-          }
-        },
-
-        // handle client exchange
-        /*
-        data structure
-        {                       [data]
-          type: "exchange",
-          name: <event-name>,
-          args: [...],
-          xid: <exchange-id>,
-          idx: <exchange-number>
-        }
-        */
-        // exchange: function (client, peer, data, msg, payload, evt) {
-        //   var
-        //     cevt,
-        //     xid = msg.xid,
-        //     midx = msg.idx,
-        //     exchanges = client._ex,
-        //     exchange,
-        //     chain = exchangeDelimiter + msg.type;
-
-        //   //  process exchange when...
-        //   if (
-        //     // exchanges are registered
-        //     exchanges &&
-        //     // not an end message
-        //     !msg.xkill && (
-        //       // either...
-        //       (
-        //         // an active exchange exists, and
-        //         (exchange = exchanges.xids[xid] && exchanges.xids[xid].pids[fromId]) &&
-        //         // the index is as expected
-        //         exchange.idx + 1 === midx &&
-        //         // there is a response for this chain
-        //         protoHas.call(exchanges.chains, exchange.thread + chain)
-        //       ) ||
-        //       (
-        //         // there is no exchange and
-        //         !exchange &&
-        //         // the idx is as expected
-        //         !midx &&
-        //         // there is a response for this chain
-        //         prtoHas(exchanges.chains, chain)
-        //       )
-        //     )
-        //   ) {
-        //     AddThreadToPeerExchange(client, xid, fromId, chain);
-
-        //     exchange = client._ex.xids[xid].pids[fromId];
-        //     cb = client._ex.chains[exchange.thread];
-        //     // define custom event
-        //     cevt = {
-        //       peer: client.peers[fromId],
-        //       type: exchange.thread,
-        //       args: msg.args.concat(),
-        //       end: function () {
-        //         endExchange(xid, exchange, client);
-        //       },
-        //       reply: function () {
-        //         if (exchange.idx === midx) {
-        //           exchange.idx++;
-        //           sendExchange(client, exchange, arguments);
-        //         }
-        //       }
-        //     };
-
-        //     client.fire('::exchange', client, cevt);
-
-        //     if (msg.args.length) {
-        //       cb.apply(client, [cevt].concat(msg.args));
-        //     } else {
-        //       cb.call(client, cevt);
-        //     }
-
-        //     // exit
-        //     return;
-        //   }
-
-        //   // if not ordered to die
-        //   if (!msg.xkill) {
-        //     // tell peer to end this conversation
-        //     client._transmit(
-        //       'exchange',
-        //       {xkill: 1},
-        //       [fromId]
-        //     );
-        //   }
-        //   // kill exchange on this client
-        //   endExchange(xid, exchange, client);
-        // }
-
-      },
-
       creds: noOp,
 
       // connection state
@@ -1535,67 +1248,12 @@
       send: function (name) {
         var args = arguments;
 
-        return this._transmitEvent(
+        return transmitEvent(
+          this,
           name,
           args.length > 1 ? protoSlice.call(args, 1) : [],
           0
         );
-      },
-
-      // start conversation with each peer
-      ask: function () {
-        var client = this;
-
-        return startExchange(client, arguments, objectKeys(client.peers)) || false;
-      },
-
-      // add callback for threaded event
-      exchange: function () {
-        var
-          client = this,
-          exCfg = parseExchangeArgs(arguments)
-        ;
-
-        // allow when config has a callback
-        if (exCfg && exCfg.cb) {
-
-          setUpExchange(client);
-
-          client._ex.chains[exCfg.chain] = exCfg.cb;
-        }
-
-        return client;
-      },
-
-      // remove callback for a threaded event
-      discard: function () {
-        var
-          client = this,
-          exCfg,
-          chains,
-          chain,
-          tgtChain;
-
-        if (
-          // exchange data exists
-          protoHas.call(client, '_ex') &&
-          // the provided arguments are valid
-          (exCfg = parseExchangeArgs(arguments)) &&
-          // the targeted chain exists (at least)
-          protoHas.call(
-            (chains = client._ex.chains),
-            (tgtChain = exCfg.chain)
-          )
-        ) {
-          // remove this and all ancestor chains
-          for (chain in chains) {
-            if (!chain.indexOf(tgtChain)) {
-              delete chains[chain];
-            }
-          }
-        }
-
-        return client;
       },
 
       // add client to bridge queue
@@ -1656,7 +1314,7 @@
             isFullString(peers) ||
             (
               isArray(peers) &&
-              peers.every(isFullString)
+              allStrings(peers)
             )
           )
         ) {
@@ -1672,29 +1330,59 @@
         }
 
         return false;
-      },
-
-      // convenience method for sending custom events
-      _transmitEvent: function (name, args, peers) {
-        return !!isFullString(name) &&
-          this._transmit(
-            'event',
-            {
-              name: name,
-              args: arguments.length > 1 ? [].concat(args) : []
-            },
-            peers ? [].concat(peers) : 0
-          );
       }
 
     });
 
-    function ClientEvent(client, fromId, msg) {
-      this.peer = client.peers[fromId];
-      this.type = msg.type;
-    }
+    // add statics
+    mix(Client, {
 
-    mix(ClientEvent.prototype, {
+      // collection of client types this client can process
+      /*
+      handler signature
+        1. receiving client instance
+        2. sending peer instance
+        3. data (in msg)
+        4. msg (in payload)
+        5. payload (decoded from event)
+        6. native post-message event
+
+      data structure
+      {                           [payload]
+        mid: <guid>,
+        type: "client",
+        sent: <date>,
+        msg: {                    [msg]
+          type: "event",
+          from: <guid>,
+          to: [<guid>, ...],
+          data: <event-data>      [data] *optional
+        }
+      }
+      */
+      msgs: {
+
+        // handle client event
+        /*
+        event-data structure
+        {                       [data]
+          name: <event-name>,
+          args: [...]
+        }
+        */
+        event: function (client, peer, data, msg, payload, customEvent) {
+          var
+            args = data.data,
+            eventName = data.type;
+
+          if (args.length) {
+            client.fire.apply(client, [eventName, customEvent].concat(args));
+          } else {
+            client.fire(eventName, customEvent);
+          }
+        }
+
+      }
 
     });
 
@@ -1726,20 +1414,12 @@
         if (!peer.state) {
           return false;
         }
-        return peer._client._transmitEvent(
+        return transmitEvent(
+          peer._client,
           name,
           args.length > 1 ? protoSlice.call(args, 1) : [],
           peer.id
         );
-      },
-
-      // begin exchange with this peer
-      ask: function () {
-        var
-          peer = this,
-          client = peer._client;
-
-        return startExchange(client, arguments, [peer.id]) || false;
       }
 
     });

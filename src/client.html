@@ -1,46 +1,59 @@
 <html>
 <head>
-  <style type="text/css">
-    .iframe {
-      display: block;
-      width: 80%;
-      height: 80%;
-      border: .1em solid red;
-    }
-  </style>
   <script src="../../morus/morus.min.js"></script>
   <script src="subetha-client.js"></script>
+  <script src="subetha-client-exchange.js"></script>
   <script type="text/javascript">
   var
-    x = new Subetha.Client('images'),
-    y = new Subetha.Client('images');
+    x = new Subetha.Client('talk'),
+    y = new Subetha.Client('talk');
+
+  x.name = 'Tom';
+  y.name = 'Bob';
 
   x.on('::connect', function () {
-    x.send('hello', 'world!');
-  });
-  x.on('::join', function (peer) {
-    console.log('a client connected to X!', peer);
-  });
-  x.on('::drop', function (peer) {
-    console.log('a client disconnected from X!', peer);
-  });
-  x.on('goodbye!', function (e, phrase) {
-    console.log('goodbye! event:', phrase);
+      console.log('%s is on the %s channel!', this.name, this.channel);
+      x.send('hello', 'welcome to the new pipe! (random: ' +  Math.random() + ')');
+    })
+    .on('::disconnect', function () {
+      console.log('gotta go!');
+    })
+    .on('::join', function (peer) {
+      console.log('a client joined', x.channel, ':', peer.id);
+      peer.ask('papers please', 12, 3);
+    })
+    .on('::drop', function (peer) {
+      console.log('a client dropped', x.channel, ':', peer.id);
+    })
+    .on('goodbye', function (e, phrase) {
+      console.log('goodbye:', phrase);
+    })
+    .open();
+
+  y.on('::connect', function () {
+      console.log('%s is on the %s channel!', this.name, this.channel);
+    }).open();
+
+  y.adhoc('papers please', function (convo) {
+    setTimeout(function () {
+      convo.reply('here you go', 'auth-stuffz');
+    }, 1000);
   });
 
-  y.on('hello', function (e, phrase) {
-    console.log('hello event:', phrase);
-    e.peer.send('goodbye!', 'my love ' + Math.random());
-  });
-  y.on('::join', function (peer) {
-    console.log('a client connected to Y!', peer);
-  });
-  y.on('::drop', function (peer) {
-    console.log('a client disconnected from Y!', peer);
+  x.adhoc('papers please', 'here you go', function (convo) {
+    console.log('checking papers', arguments);
+    setTimeout(function () {
+      console.log('thx!');
+      convo.reply('thx!');
+      convo.end();
+      convo.peer.ok = true;
+    }, 3000);
   });
 
-  x.open();
-  y.open();
+  y.adhoc('papers please', 'here you go', 'thx!', function (convo) {
+    console.log('done n youre welcome!', convo.peer);
+  });
+
   </script>
 </head>
 <body>
