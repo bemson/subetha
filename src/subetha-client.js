@@ -51,8 +51,8 @@
       in order to prefix with "//"
       */
       r_domainish = /^([\w\-]+\.)+[conmi]\w{1,2}\b/,
-      // ensures decoded data looks like a json
-      r_jsonish = /^\s*{.+}\s*/,
+      // extracts json with decoded data
+      r_extractJSON = /^[^{]{0,40}({.+})[^}]{0,40}$/,
       // for domainish urls, use http when in "file:" protocol
       networkPrefix = !location.protocol.indexOf('f') ? 'http://' : '//',
       ethaDiv = doc.createElement('div'),
@@ -1096,13 +1096,13 @@
           isFullString(coded) &&
           // decodes
           (data = cipher.decode(coded)) &&
-          // smells like a json object (due to random padding)
-          r_jsonish.test(data)
+          // has json within decoded string (accounts for random beginning and ending chars)
+          (data = r_extractJSON.exec(data))
         ) {
-          // exit if data is not a json object
+          // exit if parsing failed
           try {
-            data = JSONparse(data);
-            // increment starting index (the iframe code has already done this)
+            data = JSONparse(data[1]);
+            // increment starting index (the bridge has already done this)
             cipher.shift++;
             // return data object
             return data;

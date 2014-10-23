@@ -52,6 +52,7 @@ SubEtha Message Bus (se-msg)
       JSONparse = JSON.parse,
       LS = localStorage,
       mathRandom = Math.random,
+      stringfromCharCode = String.fromCharCode,
 
       // prototype aliases
       protoSlice = Array.prototype.slice,
@@ -646,14 +647,14 @@ SubEtha Message Bus (se-msg)
       return value && typeof value === 'string';
     }
 
-    // return random amount of whitespace
+    // return a random number of random characters, excluding "{", "|", and "}"
     function randomPadding() {
       var
         spaces = [],
         count = ~~(mathRandom() * 40);
 
       while (count--) {
-        spaces.push(' ');
+        spaces.push(stringfromCharCode(~~(mathRandom() * 90)));
       }
       return spaces.join('');
     }
