@@ -405,6 +405,10 @@
 
     };
 
+    // flag that this plugin was initialized
+    // is this namespacing for browser extensions
+    subetha._ex = true;
+
     return subetha;
   }
 
@@ -413,7 +417,7 @@
     define(initSubEthaExchange);
   } else if (inCJS) {
     module.exports = initSubEthaExchange();
-  } else if (scope.Subetha) {
+  } else if (!scope.Subetha || !scope.Subetha._ex) {
     // tack on to existing namespace
     initSubEthaExchange();
   }
