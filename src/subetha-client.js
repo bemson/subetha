@@ -55,8 +55,6 @@
       r_jsonish = /^\s*{.+}\s*/,
       // for domainish urls, use http when in "file:" protocol
       networkPrefix = !location.protocol.indexOf('f') ? 'http://' : '//',
-      defaultNetwork = 'about:blank',
-      defaultChannel = 'public',
       ethaDiv = doc.createElement('div'),
       bridges = {},
       bridgeCnt = 0,
@@ -445,9 +443,6 @@
         // expose guid function
         guid: guid,
 
-        // path to script for generated bridge
-        bridgeScript: 'subetha-bridge.js',
-
         Client: Client,
 
         Peer: Peer,
@@ -464,6 +459,11 @@
           PENDING: STATE_PENDING,
           READY: STATE_READY,
           CLOSING: STATE_CLOSING
+        },
+
+        networks: {
+          'public': 'localhost',
+          'about:blank': 'javascript:\'<script src="../../morus/morus.min.js"></script><script src="subetha-bridge.js"></script>\''
         }
 
       }
@@ -896,11 +896,11 @@
 
       bind(iframe, 'load', bridge.onLoad);
 
-      if (network === defaultNetwork) {
-        // generate bridge url
-        iframe.src = 'javascript:\'<script src="../../morus/morus.min.js"></script><script src="' + subetha.bridgeScript + '"></script>\'';
+      if (protoHas.call(subetha.networks, network)) {
+        // use aliased network aliased
+        iframe.src = subetha.networks[network];
       } else {
-        // use url or default bridge
+        // use raw network
         iframe.src = network;
       }
 
@@ -1230,9 +1230,11 @@
 
       id: '',
 
-      network: defaultNetwork,
+      // default network
+      network: 'about:blank',
 
-      channel: defaultChannel,
+      // default channel
+      channel: 'public',
 
       creds: noOp,
 
