@@ -417,9 +417,9 @@
     define(initSubEthaExchange);
   } else if (inCJS) {
     module.exports = initSubEthaExchange();
-  } else if (!scope.Subetha || !scope.Subetha._ex) {
+  } else if (scope.Subetha) {
     // tack on to existing namespace
-    initSubEthaExchange();
+    scope.Subetha = initSubEthaExchange();
   }
 }(
   typeof define === 'function',
