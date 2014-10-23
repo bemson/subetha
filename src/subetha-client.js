@@ -462,8 +462,8 @@
         },
 
         networks: {
-          'public': 'localhost',
-          'about:blank': 'javascript:\'<script src="../../morus/morus.min.js"></script><script src="subetha-bridge.js"></script>\''
+          'public': 'jsbin.com/subetha/bridge/',
+          'local': 'javascript:\'<script src="../../morus/morus.min.js"></script><script src="subetha-bridge.js"></script>\''
         }
 
       }
@@ -1186,7 +1186,7 @@
         me = this,
         credentials = protoSlice.call(arguments, 1);
 
-      // parse channelNetwork into channel and/or network
+      // ensure a channel is given...
       if (isFullString(channelNetwork)) {
         pos = channelNetwork.indexOf('@');
         if (~pos) {
@@ -1230,11 +1230,11 @@
 
       id: '',
 
-      // default network
-      network: 'about:blank',
-
       // default channel
-      channel: 'public',
+      channel: 'lobby',
+
+      // default network
+      network: 'local',
 
       creds: noOp,
 
