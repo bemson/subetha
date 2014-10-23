@@ -452,6 +452,8 @@
 
         Peer: Peer,
 
+        EventEmitter: EventEmitter,
+
         version: '0.0.0',
 
         protocol: protocolVersion,
