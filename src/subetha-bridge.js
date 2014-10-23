@@ -553,13 +553,8 @@ SubEtha Message Bus (se-msg)
             return;
           }
 
-          pos += bridgeNetworkName.length + 1;
-
-          // set cipher parts
-          cipherShift = token.substring(pos, token.indexOf(backtick, pos));
-          cipher.shift = cipherShift * 1;
-          pos += cipherShift.length + 1;
-          cipher.map = JSONparse(token.substring(pos));
+          // set cipher to remainder of bootstrap token
+          cipher.cipher(token.substring(pos + bridgeNetworkName.length + 1));
 
           // exit if cipher fails - testing with bridge id
           if (cipher.decode(cipher.encode(bridgeNetworkName)) !== bridgeNetworkName) {

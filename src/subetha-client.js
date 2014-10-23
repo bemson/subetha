@@ -879,10 +879,8 @@
         speakerKey,
         // bridge identifier
         network,
-        // cipher initial index
-        cipher.shift,
-        // cipher substitution table
-        JSONstringify(cipher.map)
+        // encoding cipher
+        cipher.cipher()
       ].join('`');
 
       // if not already enabled, subscribe to events
