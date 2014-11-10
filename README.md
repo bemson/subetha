@@ -35,7 +35,7 @@ reporter.open('news@public')
 
 SubEtha takes publish-subscribe beyond the window, by utilizing localStorage as an event bus. The architecture consists of **clients** and **bridges** (provided as separate libraries/modules). Clients are instantiated in your code, and bridges are loaded in iframes. Clients communicate with bridges via postMessage, and bridges relay messages to each other via localStorage.
 
-The other half of the transport mechanism are the protocols employed towards message integrity, security, and routing. Bridges perform an initial handshake, in order to establish a secure connection, and encodes outgoing messages to discourage sniffing. Clients must authenticate with a Bridge, before using a **network** (i.e., the _origin_ of the iframe url), and can only message **peers** in their specific **channel**.
+The other half of the transport mechanism are the protocols employed towards message integrity, security, and routing. Bridges perform an initial handshake, in order to establish a secure connection, and encodes outgoing messages to discourage sniffing. Clients must authenticate with a Bridge, before using a **network** (i.e., the _origin_ of the iframe url), and can only message **peers** in the same **channel**.
 
 This module works with two complimentary modules, having their own repositories:
 
@@ -78,7 +78,7 @@ myClient
     e.peer.send('bar', 'plus', 'additional', 'args');
   })
   .on('bar', function (e) {
-    console.log('Received "%s" from %s, on %s', e.type, e.peer.domain, e.sent);
+    console.log('Received "%s" from %s, on %s', e.type, e.peer.origin, e.sent);
   });
 ```
 
@@ -134,7 +134,7 @@ trusty.on('gimme data', function (evt) {
 });
 ```
 
-See the [bemson/subetha-client-ax](https://github.com/bemson/subetha-clieint-ax) repository for more information.
+See the [bemson/subetha-client-ax](https://github.com/bemson/subetha-client-ax) repository for more information.
 
 ### Working with Bridges
 
@@ -215,7 +215,7 @@ Subetha.EventEmitter.prototype.fire = Backbone.Event.trigger;
 
 ## API
 
-Below is reference documentation for the SubEtha (Client) module. (See [bemson/subetha-client-ax](https://github.com/bemson/subetha-client-ax]) for additions from the bundled SubEtha Ad Hoc-Exchange module.)
+Below is reference documentation for the SubEtha (Client) module. (See [bemson/subetha-client-ax](https://github.com/bemson/subetha-client-ax) for additions from the bundled SubEtha Ad Hoc-Exchange module.)
 
 **Note:** Instance methods are prefixed with a pound-symbol (`#`). Instance properties are prefixed with an at-symbol (`@`). Static members are prefixed with a double-colon (`::`).
 
