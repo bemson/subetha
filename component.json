@@ -1,0 +1,22 @@
+{
+  "name": "subetha",
+  "repository": "bemson/subetha",
+  "description": "Peerless browser pubsub",
+  "version": "0.0.0-alpha",
+  "keywords": [
+    "network",
+    "peerless",
+    "messaging",
+    "events",
+    "pubsub"
+  ],
+  "dependencies": {
+    "bemson/morus": "1.*"
+  },
+  "development": {},
+  "license": "Apache-2.0",
+  "main": "src/subetha.js",
+  "scripts": [
+    "src/subetha.js"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "subetha",
+  "version": "0.0.0-alpha",
+  "description": "PubSub over windows",
+  "main": "src/subetha.js",
+  "dependencies": {
+    "morus": "1.x",
+    "subetha-client-ax": "0.x"
+  },
+  "keywords": [
+    "network",
+    "peerless",
+    "messaging",
+    "events",
+    "pubsub"
+  ],
+  "author": {
+    "name": "Bemi Faison",
+    "email": "bemson@gmail.com",
+    "url": "https://github.com/bemson"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/bemson/subetha.git"
+  },
+  "licenses": ["Apache-2.0"]
+}

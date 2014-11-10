@@ -7,7 +7,7 @@
     "devel": true,
     "unused": true,
     "predef": [
-        "subetha",
+        "Subetha",
         "describe",
         "expect",
         "it",

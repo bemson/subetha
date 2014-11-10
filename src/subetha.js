@@ -1,9 +1,9 @@
 /*!
- * SubEtha-Client v0.0.0
+ * SubEtha-Client v0.0.0-alpha
  * http://github.com/bemson/subetha/
  *
- * Copyright, Bemi Faison
- * Released under the MIT License
+ * Copyright 1014, Bemi Faison
+ * Released under the Apache License
  */
 /* global define, require */
 !function (inAMD, inCJS, Array, Date, Math, JSON, Object, RegExp, scope, undefined) {
@@ -32,6 +32,8 @@
       DROP_EVENT = '::drop',
       CONNECT_EVENT = '::connect',
       DISCONNECT_EVENT = '::disconnect',
+      CHANGE_EVENT = '::readyStateChange',
+      netEvts = {},
       // tests whether a string looks like a domain
       /*
       should pass:
@@ -53,8 +55,9 @@
       r_domainish = /^([\w\-]+\.)+[conmi]\w{1,2}\b/,
       // extracts json with decoded data
       r_extractJSON = /^[^{]{0,40}({.+})[^}]{0,40}$/,
+      inFileProtocol = location.protocol.charAt(0) == 'f',
       // for domainish urls, use http when in "file:" protocol
-      networkPrefix = !location.protocol.indexOf('f') ? 'http://' : '//',
+      urlPrefix = inFileProtocol ? 'http://' : '//',
       ethaDiv = doc.createElement('div'),
       bridges = {},
       bridgeCnt = 0,
@@ -215,9 +218,6 @@
             hasPeers = 1;
             addPeerToClient(client, networkPeers[peerId]);
           }
-
-          // remove closured creds method - reveals prototyped noOp method
-          delete client.creds;
 
           // add to channel index
           channelName = client.channel;
@@ -381,7 +381,7 @@
           var
             clients = bridge.clients,
             peerId = msg.from,
-            handlers = Client.msgs,
+            handlers = subetha.msgType,
             handler,
             msgData,
             clientId,
@@ -438,7 +438,7 @@
       subetha = {
 
         // number of seconds to wait for the bridge to connect
-        bridgeDelay: 8000,
+        bridgeTimeout: 8000,
 
         // expose guid function
         guid: guid,
@@ -453,21 +453,73 @@
 
         protocol: protocolVersion,
 
-        states: {
-          INITIAL: STATE_INITIAL,
-          QUEUED: STATE_QUEUED,
-          PENDING: STATE_PENDING,
-          READY: STATE_READY,
-          CLOSING: STATE_CLOSING
+        urls: {
+          'public': (inFileProtocol ? 'http:' : '') + '//rawgit.com/bemson/subetha-bridge/master/public_bridge.html',
+          'local': 'javascript:\'<script src="' + (inFileProtocol ? 'http:' : '') + '//rawgit.com/bemson/subetha-bridge/master/subetha-bridge.min.js"></script>\''
         },
 
-        networks: {
-          'public': 'jsbin.com/subetha/bridge/',
-          'local': 'javascript:\'<script src="../../morus/morus.min.js"></script><script src="subetha-bridge.js"></script>\''
+        // collection of client types this client can process
+        /*
+        handler signature
+          1. receiving client instance
+          2. sending peer instance
+          3. data (in msg)
+          4. msg (in payload)
+          5. payload (decoded from event)
+          6. native post-message event
+
+        data structure
+        {                           [payload]
+          mid: <guid>,
+          type: "client",
+          sent: <date>,
+          msg: {                    [msg]
+            type: "event",
+            from: <guid>,
+            to: [<guid>, ...],
+            data: <event-data>      [data] *optional
+          }
+        }
+        */
+        msgType: {
+
+          // handle client event
+          /*
+          event-data structure
+          {                       [data]
+            name: <event-name>,
+            args: [...]
+          }
+          */
+          event: function (client, peer, customEvent, payload) {
+            var
+              data = payload.msg.data,
+              args = data.data,
+              eventName = data.type;
+
+            // add type to the event
+            customEvent.type = eventName;
+            // add copy of data to event
+            customEvent.data = [].concat(args);
+
+            if (args.length) {
+              client.fire.apply(client, [eventName, customEvent].concat(args));
+            } else {
+              client.fire(eventName, customEvent);
+            }
+          }
+
         }
 
       }
     ;
+
+    // collect netevts
+    netEvts[DROP_EVENT] = 1;
+    netEvts[JOIN_EVENT] = 1;
+    netEvts[CHANGE_EVENT] = 1;
+    netEvts[CONNECT_EVENT] = 1;
+    netEvts[DISCONNECT_EVENT] = 1;
 
     // build ethadiv
     ethaDiv.style.display = 'none';
@@ -476,8 +528,6 @@
     ethaDiv.setAttribute('data-owner', 'subetha');
 
     // UTILITY
-
-    function noOp() {}
 
     // shallow object merge
     function mix(base) {
@@ -514,14 +564,28 @@
       return value && typeof value === 'string';
     }
 
-    function allStrings(ary) {
-      var i = ary.length;
-      while (i--) {
-        if (!isFullString(ary[i])) {
+    function resolvePeers(clientPeers, vals) {
+      var
+        peers = [],
+        id,
+        ln;
+
+      if (!isArray(vals)) {
+        vals = [vals];
+      }
+      ln = vals.length;
+
+      while (ln--) {
+        id = vals[ln];
+        if (id instanceof Subetha.Peer) {
+          id = id.id;
+        }
+        if (!protoHas.call(clientPeers, id)) {
           return 0;
         }
+        peers.push(id);
       }
-      return 1;
+      return peers;
     }
 
     // FUNCTIONS
@@ -615,7 +679,6 @@
       ) {
         // set timer stamps
         payload.sent = new Date(payload.sent);
-        payload.received = new Date(evt.timeStamp);
         // pass message to handler
         bridgeDataHandlers[type](bridge, payload.msg, payload, evt);
       }
@@ -640,7 +703,7 @@
       // add client to resolved bridge
       addClient = function (client) {
         var
-          networkId = client.network,
+          networkId = client.url,
           bridge;
 
         // resolve bridge
@@ -656,7 +719,7 @@
 
       // remove client from bridge
       removeClient = function (client) {
-        var bridge = client.bridge(privateKey);
+        var bridge = client._bridge(privateKey);
         if (bridge) {
           bridge.removeClient(client);
         }
@@ -684,15 +747,14 @@
       ) {
         peer = client.peers[peerId];
         customEvent = {
-          type: data.type,
-          data: [].concat(data.data),
+          // type: data.type,
+          // data: [].concat(data.data),
           id: payload.mid,
           peer: peer,
           sent: payload.sent,
-          received: payload.received,
           timeStamp: evt.timeStamp
         };
-        handler(client, peer, data, msg, payload, customEvent);
+        handler(client, peer, customEvent, payload);
       }
     }
 
@@ -701,11 +763,11 @@
       return !!isFullString(type) &&
         client._transmit(
           'event',
+          peers,
           {
             type: type,
             data: args.length > 1 ? [].concat(args) : []
-          },
-          peers ? [].concat(peers) : 0
+          }
         );
     }
 
@@ -720,7 +782,7 @@
       // set new client state
       client.state = newState;
       // announce change
-      client.fire('::readyStateChange', newState, oldState);
+      client.fire(CHANGE_EVENT, newState, oldState);
 
       // exit if the state was changed, after this event
       if (client.state !== newState) {
@@ -730,10 +792,9 @@
       if (newState === STATE_INITIAL) {
         // clear peers
         client.peers = {};
+        // fire disconnect event if connected
         if (oldState > STATE_PENDING) {
           client.fire(DISCONNECT_EVENT);
-        } else {
-          client.fire('::closed');
         }
       }
 
@@ -741,9 +802,6 @@
         client.fire(CONNECT_EVENT);
       }
 
-      if (newState === STATE_CLOSING) {
-        client.fire('::closing');
-      }
     }
 
     function addPeerToClient(client, peerData) {
@@ -896,16 +954,16 @@
 
       bind(iframe, 'load', bridge.onLoad);
 
-      if (protoHas.call(subetha.networks, network)) {
+      if (protoHas.call(subetha.urls, network)) {
         // use aliased network aliased
-        iframe.src = subetha.networks[network];
+        iframe.src = subetha.urls[network];
       } else {
         // use raw network
         iframe.src = network;
       }
 
       // give bridge time to connect
-      bridge.dDay(subetha.bridgeDelay);
+      bridge.dDay(subetha.bridgeTimeout);
 
       // add bridge to ethadiv
       ethaDiv.appendChild(iframe);
@@ -940,7 +998,7 @@
           // uptick tally
           bridge.cnt++;
           // expose bridge via closured method
-          client.bridge = function (val) {
+          client._bridge = function (val) {
             return val === privateKey && bridge;
           };
           // add to client queue
@@ -986,15 +1044,20 @@
 
       // authenticate client (with network)
       auth: function (client) {
+        var creds;
         // set client to pending
         setClientState(client, STATE_PENDING);
         // if still pending, then send client to bridge
         if (client.state == STATE_PENDING) {
+          creds = client.credentials;
+          if (!isArray(creds)) {
+            creds = [creds];
+          }
           // authenticate client
           this.send('auth', {
             id: client.id,
             channel: client.channel,
-            creds: client.creds(privateKey)
+            creds: creds
           });
         }
       },
@@ -1058,7 +1121,7 @@
         var clientState = client.state;
 
         // remove custom bridge method
-        delete client.bridge;
+        delete client._bridge;
 
         // for pending and ready clients...
         if (clientState > STATE_QUEUED && clientState < STATE_CLOSING) {
@@ -1178,49 +1241,13 @@
     });
 
 
-    function Client (channelNetwork) {
-      var
-        channel,
-        network,
-        pos,
-        me = this,
-        credentials = protoSlice.call(arguments, 1);
+    function Client () {
+      var me = this;
 
-      // ensure a channel is given...
-      if (isFullString(channelNetwork)) {
-        pos = channelNetwork.indexOf('@');
-        if (~pos) {
-          channel = channelNetwork.substring(0, pos);
-          network = channelNetwork.substring(pos + 1);
-        } else {
-          channel = channelNetwork;
-        }
-
-        // use given channel
-        if (channel) {
-          me.channel = channel;
-        }
-
-        // sanitize and use given network
-        if (network) {
-          if (r_domainish.test(network)) {
-            // add protocol safe prefix, if network looks like a domain
-            network = networkPrefix + network;
-          }
-          me.network = network;
-        }
-        me.peers = {};
-      }
-
-      // private creds method
-      // sets network credentials
-      me.creds = function (val) {
-        if (val === privateKey) {
-          return credentials;
-        }
-        credentials = protoSlice.call(arguments);
-        return me;
-      };
+      // hash of peers
+      me.peers = {};
+      // init credentials array
+      me.credentials = [];
     }
 
     // extend EventEmitter
@@ -1233,21 +1260,19 @@
       // default channel
       channel: 'lobby',
 
-      // default network
-      network: 'local',
-
-      creds: noOp,
+      // default url
+      url: 'local',
 
       // connection state
       state: STATE_INITIAL,
 
       // returns closured bridge when connected and passed correct key
-      bridge: function () {
+      _bridge: function () {
         return false;
       },
 
       // broadcast custom event to peers
-      send: function (name) {
+      emit: function (name) {
         var args = arguments;
 
         return transmitEvent(
@@ -1259,25 +1284,59 @@
       },
 
       // add client to bridge queue
-      open: function () {
+      open: function (network) {
         var
-          args = arguments,
           me = this,
-          state = me.state;
+          channel = me.channel,
+          url = me.url,
+          args = arguments,
+          state = me.state,
+          pos;
 
-        if (state < STATE_PENDING && args.length) {
-          // set bridge access credentials
-          me.creds.apply(me, args);
+        // process the given channel...
+        if (isFullString(network)) {
+          pos = network.indexOf('@');
+          if (~pos) {
+            channel = network.substring(0, pos) || channel;
+            url = network.substring(pos + 1) || url;
+          } else {
+            channel = network;
+          }
+
+          // update access credentials if given
+          if (args.length > 1) {
+            me.credentials = protoSlice.call(args, 1);
+          }
         }
 
-        // when initial
-        if (state < STATE_QUEUED) {
+        // if url looks like a domain, add protocol safe prefix
+        if (r_domainish.test(url)) {
+          url = urlPrefix + url;
+        }
+
+        // when already open-ed/ing
+        if (state > STATE_PENDING) {
+          // exit if same channel and url
+          if (channel == me.channel && url == me.url) {
+            return;
+          }
+          // close existing connection
+          me.close();
+        }
+
+        // set resolved network
+        me.channel = channel;
+        me.url = url;
+
+        // open if at initial state
+        if (state < STATE_PENDING) {
+
           // set id now
           me.id = guid();
           // update state to queued
           setClientState(me, STATE_QUEUED);
           // if state hasn't changed since queuing (i.e., they haven't closed the client)
-          if (me.state === STATE_QUEUED) {
+          if (me.state == STATE_QUEUED) {
             // add to global/bridge queue
             addClient(me);
           }
@@ -1300,24 +1359,21 @@
         return client;
       },
 
-      // send arbitrary client event
-      _transmit: function (type, data, peers) {
+      // send arbitrary client message
+      _transmit: function (type, peers, data) {
         var
           client = this,
-          bridge = client.bridge(privateKey);
+          bridge = client._bridge(privateKey);
 
         if (
           bridge &&
-          bridge.state === STATE_READY &&
-          client.state === STATE_READY &&
+          bridge.state == STATE_READY &&
+          client.state == STATE_READY &&
           isFullString(type) &&
+          !protoHas.call(netEvts, type) &&
           (
             !peers ||
-            isFullString(peers) ||
-            (
-              isArray(peers) &&
-              allStrings(peers)
-            )
+            (peers = resolvePeers(client.peers, peers))
           )
         ) {
           return bridge.send(
@@ -1332,58 +1388,6 @@
         }
 
         return false;
-      }
-
-    });
-
-    // add statics
-    mix(Client, {
-
-      // collection of client types this client can process
-      /*
-      handler signature
-        1. receiving client instance
-        2. sending peer instance
-        3. data (in msg)
-        4. msg (in payload)
-        5. payload (decoded from event)
-        6. native post-message event
-
-      data structure
-      {                           [payload]
-        mid: <guid>,
-        type: "client",
-        sent: <date>,
-        msg: {                    [msg]
-          type: "event",
-          from: <guid>,
-          to: [<guid>, ...],
-          data: <event-data>      [data] *optional
-        }
-      }
-      */
-      msgs: {
-
-        // handle client event
-        /*
-        event-data structure
-        {                       [data]
-          name: <event-name>,
-          args: [...]
-        }
-        */
-        event: function (client, peer, data, msg, payload, customEvent) {
-          var
-            args = data.data,
-            eventName = data.type;
-
-          if (args.length) {
-            client.fire.apply(client, [eventName, customEvent].concat(args));
-          } else {
-            client.fire(eventName, customEvent);
-          }
-        }
-
       }
 
     });
