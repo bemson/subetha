@@ -1,11 +1,14 @@
 {
   "name": "subetha",
-  "version": "0.0.0-alpha",
+  "version": "0.0.1-alpha",
   "description": "PubSub over windows",
   "main": "src/subetha.js",
   "dependencies": {
-    "morus": "1.x",
-    "subetha-client-ax": "0.x"
+    "subetha-client-pe": "*",
+    "subetha-client-ax": "*"
+  },
+  "bundledDependencies": {
+    "subetha-bridge": "*"
   },
   "keywords": [
     "network",

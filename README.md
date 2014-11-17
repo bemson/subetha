@@ -2,7 +2,6 @@
 
 PubSub over windows
 
-version 0.0.0-alpha
 by Bemi Faison
 
 
@@ -35,17 +34,18 @@ reporter.open('news@public')
 
 SubEtha takes publish-subscribe beyond the window, by utilizing localStorage as an event bus. The architecture consists of **clients** and **bridges** (provided as separate libraries/modules). Clients are instantiated in your code, and bridges are loaded in iframes. Clients communicate with bridges via postMessage, and bridges relay messages to each other via localStorage.
 
-The other half of the transport mechanism are the protocols employed towards message integrity, security, and routing. Bridges perform an initial handshake, in order to establish a secure connection, and encodes outgoing messages to discourage sniffing. Clients must authenticate with a Bridge, before using a **network** (i.e., the _origin_ of the iframe url), and can only message **peers** in the same **channel**.
-
-This module works with two complimentary modules, having their own repositories:
-
-  * [SubEtha-Bridge](https://github.com/bemson/subetha-bridge)
-  * [SubEtha Adhoc-Exchange](https://github.com/bemson/subetha-client-ax)
+The other half of the transport mechanism are the protocols employed towards message integrity, security, and routing. Bridges perform an initial handshake, in order to establish a secure connection that includes message encoding. Bridges then authorize Clients to communicate with **peers** on a **network** -the _origin_ of a bridge url and an arbitrary **channel**.
 
 
 ## Usage
 
-SubEtha is the primary module used by your application code. This module provides classes for connecting to a given channel and communicating with peers.
+SubEtha is a "roll-up" of modules which add basic networking and messaging capability to your application.
+
+  * [SubEtha-Client](https://github.com/bemson/subetha-client)
+  * [SubEtha Peer-Events](https://github.com/bemson/subetha-client-pe)
+  * [SubEtha Adhoc-Exchange](https://github.com/bemson/subetha-client-ax)
+
+As well, SubEtha works with the complimentary module [SubEtha-Bridge](https://github.com/bemson/subetha-bridge).
 
 ### Working with clients
 
@@ -82,11 +82,13 @@ myClient
   });
 ```
 
-Now that your client is ready to "talk", connect to a channel and network using the `#open()` method. Pass it a string, formatted as _channel@url, where _channel_ is an arbitrary identifier, and _url_ is a url or alias to one (defined in `Subetha.urls`). By default, clients connect to "lobby@local", or the "lobby" channel of the "local" url.
+Now that your client is ready to "talk", connect to a channel and network using the `#open()` method. Pass it a string, formatted as _channel@url, where _channel_ is an arbitrary identifier, and _url_ is a url or alias to one (defined in `Subetha.urls`).
 
 ```js
 myClient.open('ecart'); // same as "ecart@local"
 ```
+
+**Note:** The default url is the "local" alias.
 
 Once a connection is established, you'll be able to access and communicate with your channel peers. Peers are represented as `Subetha.Peer` instances in the `client.peers` member. (Peer event subscribers can access the _sending_ peer, as the `event.peer` member of the event-object.)
 
@@ -101,9 +103,11 @@ if (allDone) {
 }
 ```
 
-#### Defining an exchange
+See the [Subetha Peer-Events module](https://github.com/bemson/subetha-client-pe) for more information.
 
-SubEtha comes bundled with the Ad Hoc-Exchange plugin (or AX), for establishing stateful event logic. When you define an exchange, you're describing what events need to be passed back and forth with one peer, before executing logic. This could prove valuable in a peerless network, like SubEtha.
+#### Establishing an exchange
+
+SubEtha comes bundled with the SubEtha Ad Hoc-Exchange module (or AX), for establishing stateful event logic. When you define an exchange, you're describing what events need to be passed back and forth with one peer, before executing logic. This could prove valuable in a peerless network, like SubEtha.
 
 Below demonstrates using AX to vet peers before responding to an event.
 
@@ -134,7 +138,7 @@ trusty.on('gimme data', function (evt) {
 });
 ```
 
-See the [bemson/subetha-client-ax](https://github.com/bemson/subetha-client-ax) repository for more information.
+See the [Subetha Ad Hoc-Exchange module](https://github.com/bemson/subetha-client-ax) for more information.
 
 ### Working with Bridges
 
@@ -144,7 +148,7 @@ The first bridge-alias is "local", a JavaScript url that uses the same domain as
 
 The second bridge-alias is "public", a publicly hosted, open-source web page that accepts any client and any channel. Eventually this bridge will captures non-critical usage information, so everyone can get a sense of SubEtha's usage.
 
-See the [bemson/subetha-bridge](https://github.com/bemson/subetha-bridge) repository for more information.
+See the [Subetha-Bridge module](https://github.com/bemson/subetha-bridge) for more information.
 
 #### Authenticating clients
 
@@ -173,7 +177,7 @@ While SubEtha routes messages, and communicates with bridges privately (via a cl
 
 #### Sending & receiving custom messages
 
-SubEtha lets you send custom message types, to encapsulate and enforce logic between _known_ peers. For example, the bundled AX plugin defines an "exchange" message type, and can therefore converse with peers using the same plugin. (The built-in/default message type is "event".)
+The Subetha-Client module lets you send custom message types, to encapsulate and enforce logic between _known_ peers. For example, the bundled AX plugin defines a "subetha/exchange" message type, and can therefore converse with peers using the same module. Similarly, the bundled PE plugin, defines a "subetha/event" message type.
 
 Below demonstrates defining a "boot" message type. Methods for sending this message type have been added to the Client and Peer prototypes. As well, a boot message handler has been added to the `Subetha.msgType` namespace.
 
@@ -187,7 +191,7 @@ Subetha.Client.prototype.kickAll = function () {
 // add Peer method for sending this custom type
 Subetha.Peer.prototype.kick = function () {
   // send message to this peer only
-  this._client._transmit('boot', this.id);
+  this._client._transmit('boot', this);
 };
 
 // add handler for when this message targets a client
@@ -197,7 +201,7 @@ Subetha.msgType.boot = function (receivingClient) {
 };
 ```
 
-The `Client#_transmit()` method sends any message type you like. (See the SubEtha or AX module source-code for more information on this method.) Keep in mind that for any custom message to work, a message handler must exist on the recieving peer.
+The `Client#_transmit()` method sends any message type you like. (See the PE module for more information on this method.) Keep in mind that for any custom message to work, a corresponding message handler must exist on the recieving peer.
 
 #### Overriding the EventEmitter
 
@@ -213,267 +217,10 @@ Subetha.EventEmitter.prototype.fire = Backbone.Event.trigger;
 
 **Note:** This example presumes you have [BackBone](http://documentcloud.github.io/backbone/) and [Underscore](http://underscorejs.org/) in your environment.
 
+
 ## API
 
-Below is reference documentation for the SubEtha (Client) module. (See [bemson/subetha-client-ax](https://github.com/bemson/subetha-client-ax) for additions from the bundled SubEtha Ad Hoc-Exchange module.)
-
-**Note:** Instance methods are prefixed with a pound-symbol (`#`). Instance properties are prefixed with an at-symbol (`@`). Static members are prefixed with a double-colon (`::`).
-
-
-### Subetha::Client
-
-Creates a new Client instance.
-
-```
-var client = new Subetha.Client();
-```
-
-This class inherits from `Subetha.EventEmitter`.
-
-##### Client event object
-
-Client events are messages sent by other peers (via the `Peer#send()` and `Client#send()` methods). Callbacks receive the following normalized _event object_, along with any additional message parameters.
-
-  * `data` - Array of additional message parameters given.
-  * `id` - Unique identifier for this message.
-  * `peer` - The peer that sent this message.
-  * `sent`:  The time (as a Date instance) when the message was sent
-  * `timeStamp`: The time (in milliseconds) when the event occurred.
-  * `type` - The event type of this message.
-
-##### Network events
-
-Instances fire the following _network_ events - as opposed to _client_ events - prefixed by a double-colon (`::`). Network events do not pass a common event object, like with client events.
-
-  * **::connect** - Triggered when a connection is established.
-  * **::disconnect** - Triggered when the client connection ends.
-  * **::drop** - Triggered when a peer leaves the channel.
-    * `peer`: _(Peer)_ References the recently removed `Subetha.Peer` instance.
-  * **::join** - Triggered when a peer joins the channel.
-    * `peer`: _(Peer)_ References the newly added `Subetha.Peer` instance.
-  * **::readyStateChange** - Triggered when `@state` changes. This event precedes the _::connect_ and _::disconnect_ events, respectively.
-    * `newState`: _(number)_ The integer of the new state.
-    * `oldState`: _(number)_ The integer of the old state.
-
-#### Client#close()
-
-Close the client connection.
-
-```
-client.close();
-```
-
-#### Client#emit()
-
-Broadcast a message to channel peers.
-
-```
-client.emit(event [, args]);
-```
-
-   * **event**: _(string)_ The event to trigger. (Can not be a network event.)
-   * **args**: _(mix)_ Remaining arguments to be passed as additional callback parameters.
-
-#### Client#open()
-
-Establish a connection to a specific channel and (bridge) url.
-
-```
-client.open([network [, credentials, ... ]);
-```
-
-  * **network**: _(string)_ The _channel_ and _bridge_ to authorize, in the format "channel@url". The parsed value updates the `@channel` and/or `@url` properties.
-  * **credentials**: (_mix_) Any additional arguments replace `@credentials` and are sent to the bridge.
-
-Opening closes existing connections, unless it is the same network.
-
-#### Client#_bridge()
-
-A closured method that only returns a bridge handle when passed a private value. All other invocations return `false`.
-
-#### Client#_transmit()
-
-Sends an arbitrary message to some or all peers.
-
-```
-client._transmit(type [, peers [, data]]);
-```
-
-   * **type**: _(string)_ The message type.
-   * **peers**: _(string[]|peer[])_ One or an array of recipient peers (ids or instances). When omitted or falsy, the message is broadcast to all peers.
-   * **data**: _(mix)_ An arbtrary value passed to the message type handler of the recieving peer.
-
-Returns `true` when the message is successfully sent. Otherwise `false`.
-
-**Note:** This method should _not_ be invoked directly, but by library authors extending the SubEtha module.
-
-#### Client@channel
-
-A string reflecting the network channel. The default value is "lobby".
-
-#### Client@credentials
-
-A value sent when establishing a client connection. The `null` or `undefined` are ignored.
-
-#### Client@id
-
-A hash to uniquely identify this instance in a network. This property changes when establishing a (new) connection.
-
-#### Client@state
-
-A number reflecting the connection status. There are four possible states:
-
-  * **0**: The _initial_ state, when there is no connection.
-  * **1**: The _queued_ state, when a connection request is queued.
-  * **2**: The _pending_ state, when a connection request has been sent.
-  * **3**: The _ready_ state, when a connection has been established.
-  * **4**: The _closing_ state, when the connection is closing.
-
-**Note:** The _::readyStateChange_ event fires when this value changes.
-
-#### Client@url
-
-A string reflecting the network url or alias. The default value is "local".
-
-### Subetha::EventEmitter
-
-Creates a new EventEmitter instance.
-
-```
-var eventer = new Subetha.EventEmitter();
-```
-
-#### EventEmittter#fire()
-
-Triggers callbacks, subscribed to this event.
-
-```
-eventer.fire(event [, args, ... ]);
-```
-
-   * **event**: _(string)_ The event to trigger.
-   * **args**: _(mix)_ Remaining arguments that should be passed to all attached callbacks.
-
-#### EventEmittter#on()
-
-Subscribe a callback to an event.
-
-```
-eventer.on(event, callback [, scope]);
-```
-
-   * **event**: _(string)_ An arbitrary event name.
-   * **callback**: _(function)_ A callback to invoke when the event is fires.
-   * **scope**: _(object)_ An object to scope the callback invocation. By default, this is the EventEmitter instance.
-
-#### EventEmittter#off()
-
-Unsubscribe callback(s) from an event. When invoked with no arguments, all subscriptions are removed.
-
-```
-eventer.off([event [, callback [, scope]]]);
-```
-
-   * **event**: _(string)_ The event to unsubscribe. When omitted, all event subscribers are removed.
-   * **callback**: _(function)_ The callback to detach from this event. When omitted, all callbacks are detached from this event.
-   * **scope**: _(object)_ Specifies detaching the given callback that is _also_ scoped to the given object. Do not use, unless you attached a callback with a particular scope.
-
-### Subetha::Peer
-
-Creates a new Peer instance. This class is _not_ meant for direct instantiation.
-
-```
-var peer = Subetha.Peer(cfg, client);
-```
-
-  * **cfg**: _(object)_ Configuration values for peer properties.
-  * **client**: _(Client)_ The client instance that will reference this peer.
-
-#### Peer#send()
-
-Send an event to this peer.
-
-```
-peer.send(event [, args, ... ])
-```
-
-   * **event**: _(string)_ The event to trigger. (Can not be a network event.)
-   * **args**: _(mix)_ Remaining arguments to be passed as additional callback parameters.
-
-#### Peer@channel
-
-A string reflecting the network channel.
-
-#### Peer@id
-
-A hash to uniquely identify this peer in a network.
-
-#### Peer@origin
-
-The url origin of the web page hosting the peer.
-
-#### Peer@start
-
-A `Date` instance indicating when the peer joined the network.
-
-### Subetha::guid()
-
-Returns a unique hash of characters.
-
-```
-var hash = Subetha.guid();
-```
-
-### Subetha::bridgeTimeout
-
-The number of milliseconds to wait before aborting a connection attempt. The default value is `8000` or eight seconds.
-
-### Subetha::msgType
-
-Hash of message handling functions, keyed by the message type they handle. (For instance, a built-in type is "event", for handling event messages.) This property is meant for library authors, extending the SubEtha module.
-
-Below is the call signature passed to message handlers.
-
-  * **client** - The recipient client, targeted by this message.
-  * **peer** - The peer that sent the message.
-  * **event** - A unique event object, to use as a base for this message and client.
-    * `id`: The message identifier
-    * `peer`: The Peer instance that sent this message
-    * `sent`:  The time (as a Date instance) when the message was sent
-    * `timeStamp`: The time (in milliseconds) when the event occurred
-  * **data** - The message data, as sent via `#_transmit()` by the peer.
-  * **payload** - The entire client message, as received on the network.
-
-Below is the JSON structure of the _payload_ argument.
-
-```
-{                         // payload
-  mid: <guid>,            // payload id
-  type: "client",         // payload class
-  sent: <date>,           // send date
-  msg: {                  // payload message
-    from: <guid>,         // peer id
-    to: [<guid>, ...],    // client id(s)
-    type: <message-type>, // message type
-    data: <message-data>  // message data
-  }
-}
-```
-
-### Subetha::protocol
-
-The [SemVer](http://semver.org) compatible version of the SubEtha protocol supported by this module.
-
-### Subetha::urls
-
-Hash of urls keyed by an alias. This collection is used to resolved the client url when establishing a connection. The default members are:
-
-  * `local`: A JavaScript URL that loads a publicly hosted copy of Subetha.
-  * `public`: A publicly hosted bridge.
-
-### Subetha::version
-
-The [SemVer](http://semver.org) compatible version of this module.
+API documentation is available in the repositories of the respective modules that comprise the SubEtha module.
 
 
 ## Installation
@@ -486,17 +233,8 @@ If a SubEtha isn't compatible with your favorite runtime, please file an issue o
 
 SubEtha depends on the following modules:
 
-  * [Morus](https://github.com/bemson/morus)
-  * [SubEtha Ad Hoc-Exchange Plugin](https://github.com/bemson/subetha-client-ax)
-
-SubEtha also uses the following ECMAScript 5 and HTML 5 features:
-
-  * [JSON.parse](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)
-  * [JSON.stringify](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify)
-  * [localStorage](http://diveintohtml5.info/storage.html)
-  * [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window.postMessage)
-
-You will need to implement shims for these browser features in unsupported environments. Note however that postMessage and localStorage shims will only allow this module to run without errors, not work as expected.
+  * [SubEtha Ad Hoc-Exchange](https://github.com/bemson/subetha-client-ax)
+  * [SubEtha Peer-Events](https://github.com/bemson/subetha-client-pe)
 
 ### Web Browsers
 
@@ -516,6 +254,8 @@ Use a `<SCRIPT>` tag to load the _subetha.min.js_ file in your web page. The fil
   * `npm install subetha`
   * `component install bemson/subetha`
   * `bower install subetha`
+
+**Caution:** The npm dependencies load the Subetha-Client modules as a [peerDependency](https://www.npmjs.org/doc/files/package.json.html#peerdependencies).
 
 ### AMD
 

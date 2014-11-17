@@ -1,6 +1,6 @@
 {
   "name": "subetha",
-  "version": "0.0.0-alpha",
+  "version": "0.0.1-alpha",
   "homepage": "https://github.com/bemson/subetha",
   "authors": [
     "Bemi Faison <bemson@gmail.com>  (http://learnings-bemson.blogspot.com)"
@@ -8,7 +8,8 @@
   "description": "Peerless browser pubsub",
   "main": "src/subetha.js",
   "dependencies": {
-    "morus": "1.*"
+    "subetha-client-pe": "*",
+    "subetha-client-ax": "*"
   },
   "keywords": [
     "network",

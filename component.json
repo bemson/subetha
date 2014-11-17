@@ -2,7 +2,7 @@
   "name": "subetha",
   "repository": "bemson/subetha",
   "description": "Peerless browser pubsub",
-  "version": "0.0.0-alpha",
+  "version": "0.0.1-alpha",
   "keywords": [
     "network",
     "peerless",
@@ -11,7 +11,8 @@
     "pubsub"
   ],
   "dependencies": {
-    "bemson/morus": "1.*"
+    "bemson/subetha-client-pe": "*",
+    "bemson/subetha-client-ax": "*"
   },
   "development": {},
   "license": "Apache-2.0",
