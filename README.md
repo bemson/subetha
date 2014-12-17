@@ -301,7 +301,7 @@ SubEtha currently encodes and decodes _outgoing_ messages (from bridge to the cl
 
  * [William Kapke-Wicks](https://github.com/williamwicks/) - Inspired me to explore [storage events](http://html5demos.com/storage-events) and published [scomm](https://github.com/williamwicks/scomm).
  * Shankar Srinivas - Original cheerleader for this (and all things non-work related).
- * [Chris Nojima](https://github.com/cnojima) - Saw the forest when I saw trees.
+ * [Chris Nojima](https://github.com/cnojima) - Ensured this thing doesn't completely suck.
  * [Mathias Buus](https://github.com/mafintosh) - Random guy who suggested the random bootstrap delay.
  * [Oakland JS](http://oaklandjs.com) - One brilliant hive mind of support and ingenuity!
 
