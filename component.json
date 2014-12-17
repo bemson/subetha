@@ -1,8 +1,8 @@
 {
   "name": "subetha",
   "repository": "bemson/subetha",
-  "description": "Peerless browser pubsub",
   "version": "0.0.1-alpha",
+  "description": "PubSub over windows",
   "keywords": [
     "network",
     "peerless",

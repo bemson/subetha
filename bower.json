@@ -5,7 +5,7 @@
   "authors": [
     "Bemi Faison <bemson@gmail.com>  (http://learnings-bemson.blogspot.com)"
   ],
-  "description": "Peerless browser pubsub",
+  "description": "PubSub over windows",
   "main": "src/subetha.js",
   "dependencies": {
     "subetha-client-pe": "*",
