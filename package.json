@@ -7,9 +7,9 @@
     "subetha-client-pe": "*",
     "subetha-client-ax": "*"
   },
-  "bundledDependencies": {
-    "subetha-bridge": "*"
-  },
+  "bundledDependencies": [
+    "subetha-bridge"
+  ],
   "keywords": [
     "network",
     "peerless",
