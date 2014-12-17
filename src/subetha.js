@@ -13,8 +13,7 @@
     // is this needed for npm to augment the "subetha-client" module??
     // is anything needed in here at all for non-amd/cjs loading?
     if (inCJS || inAMD) {
-      var subetha = useRequire ? require('subetha-client-pe') : scope.SubEtha;
-
+      var subetha = require('subetha-client-pe');
       // "append" additional plugins?
       subetha = require('subetha-client-ax');
 
