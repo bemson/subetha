@@ -25,13 +25,13 @@ The "system" could be anything: <!-- .element: class="fragment" -->
 
 # What's a Domain?
 
-A _domain_ is where your events occur.
+A "domain" is where your events occur. <!-- .element: class="fragment" -->
 
 Withstanding sub-domains, there's only one per website. <!-- .element: class="fragment" -->
 
 ---
 
-# Events are Domain-Bound
+# Domain-Bound Events
 
 Within a single application, it's implied that events are how our code talks to itself.
 
@@ -40,6 +40,8 @@ Within a single application, it's implied that events are how our code talks to 
 # When Domains Collaborate
 
 When data is accessible across accounts, users gain a more seamless web experience.
+
+---
 
 > "My peanut-butter.com account would work great with my jelly.com data! Or, I could put them together on bread.com!"
 
