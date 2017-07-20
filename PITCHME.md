@@ -95,7 +95,7 @@ Users could encounter less friction from sharing data.
 
 ---
 
-> "Yes, my bread.com account automatically pulled _data_ from my peanut-butter.com and jelly.com accounts!
+> "Yes! My bread.com account automatically pulled _data_ from my peanut-butter.com and jelly.com accounts!
 
 ---
 
