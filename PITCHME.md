@@ -81,9 +81,9 @@ window.postMessage('Hello!', 'otherdomain.com');
 
 # Why so serious?
 
-Browsers have defensive same-origin policies that protect client and server communication. <!-- .element: class="fragment" --> This is a _good_ thing. <!-- .element: class="fragment" -->
+Browsers have defensive same-origin policies that protect client and server communication. <!-- .element: class="fragment" --> This is a good thing. <!-- .element: class="fragment" -->
 
-Otherwise, free access between browser windows means free access between servers.  <!-- .element: class="fragment" -->That would be a _bad_ thing. <!-- .element: class="fragment" -->
+Otherwise, free access between browser windows means free access between servers.  <!-- .element: class="fragment" -->That would be a bad thing. <!-- .element: class="fragment" -->
 
 ---
 
