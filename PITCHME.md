@@ -5,8 +5,8 @@
 
 # Who Am I?
 
-Bemi Faison
-bemson@gmail.com
+Bemi Faison <br>
+bemson@gmail.com <br>
 github.com/bemson
 
 ---
