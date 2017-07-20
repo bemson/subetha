@@ -49,7 +49,7 @@ When data is accessible across accounts, users gain a more seamless web experien
 
 ---
 
-# Servers have many options
+# Servers have many
 
   * REST
   * oAuth
@@ -58,26 +58,26 @@ When data is accessible across accounts, users gain a more seamless web experien
 
 ---
 
-# Clients have fewer options
+# Clients have few
 
   * postMessage
 
 ---
 
-# postMessage is a hard sell
+# postMessage is hard
 
-Syntax example:
+Example syntax:
 
 ```
 window.postMessage('Hello!', 'otherdomain.com');
 ```
-
- * Requires a window reference
+|
+ * Requires a window reference|
  * Heavy code coordination
 
 ---
 
-# Why are clients so serious?
+# Why so serious?
 
 Browsers have defensive same-origin policies that protect client and server communication. This is a _good_ thing.
 
@@ -85,7 +85,7 @@ Otherwise, free access between browser windows means free access between servers
 
 ---
 
-# What if clients had more options?
+# What if clients had more?
 
 Users could encounter less friction from sharing data.
 
@@ -121,7 +121,7 @@ Met with [William Kapke-Wicks](https://github.com/williamkapke/), at [Oakland's 
 
 ---
 
-# Architecture Overview
+# Architecture
 
 SubEtha uses a _bridge_ to relay events amongst windows - an iframe, pointing to a shared domain.
 
@@ -162,26 +162,26 @@ _As of this presentation, the demos only work in Firefox..._ :-\\
 
 ---
 
-## Is this solution looking for a problem?
+# Is this solution looking for a problem? |
 ### (Yes.)
 
 ---
 
-# SubEtha: cater to the user
+# Cater to the user
 
- * Share data between active windows (saving bandwidth)
- * Flight websites could know where you're going when they load
- * News sites notice if you're into sports or politics
- * Social sites ask if you wanna broadcast a post
+ * Share data between active windows (saving bandwidth) |
+ * Flight websites could know where you're going when they load |
+ * News sites notice if you're into sports or politics |
+ * Social sites ask if you wanna broadcast a post |
  * One, floating shopping cart for all your shopping
 
 ---
 
 # Let's talk Security
 
-SubEtha uses a MessageChannel to communicate with the bridge, directly.
+SubEtha uses a MessageChannel to communicate with the bridge, directly. |
 
-Bridges are (trusted) third party arbiters with control over whom joins a channel and the messages exchanged.
+Bridges are (trusted) third party arbiters with control over whom joins a channel and the messages exchanged. |
 
 Clients can only receive and send known event types.
 
@@ -189,19 +189,19 @@ Clients can only receive and send known event types.
 
 # Technical Pivots
 
- * Started with localStorage events...
- * Ending at [(shared) web-workers and IndexedDB](https://github.com/bemson/subetha-bridge/issues/5)
- * Focus on eventual consistency, rather than latency
- * Fluctuating browser support
+ * Started with localStorage events... |
+ * Ending at [(shared) web-workers and IndexedDB](https://github.com/bemson/subetha-bridge/issues/5) |
+ * Focus on eventual consistency, rather than latency |
+ * Fluctuating browser support |
 
 See the gruesome details and [lengthy discussion](https://github.com/bemson/subetha-bridge/issues/1), with [Dmitry Utkin](https://github.com/gothy), [Tom Jacques](https://github.com/tejacques) and [Vitaly Puzrin](https://github.com/puzrin).
 
 ---
 
-# Final Notes
+# Final Notes |
 
- * SubEtha is an abandoned alpha project.
- * Updates are planned, but it's future is unclear. (The demo used to work in Chrome!)
+ * SubEtha is an abandoned alpha project. |
+ * Updates are planned, but it's future is unclear. (The demo used to work in Chrome!) |
 
 As with any external communication: **Only send want to share!**
 
