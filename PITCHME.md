@@ -13,7 +13,11 @@ github.com/bemson
 
 # What's an Event?
 
-An _event_ is a message between systems. <!-- .element: class="fragment" -->
+<!-- .element: class="fragment" -->
+
+An _event_ is a message between systems.
+
+<!-- .element: class="fragment" -->
 
 The "system" could be anything:
 
@@ -162,26 +166,26 @@ _As of this presentation, the demos only work in Firefox..._ :-\\
 
 ---
 
-# Is this solution looking for a problem? |
-### (Yes.)
+# Is this solution looking for a problem?
+### (Yes.) <!-- .element: class="fragment" -->
 
 ---
 
 # Cater to the user
 
- * Share data between active windows (saving bandwidth) |
- * Flight websites could know where you're going when they load |
- * News sites notice if you're into sports or politics |
- * Social sites ask if you wanna broadcast a post |
+ * Share data between active windows (saving bandwidth) <!-- .element: class="fragment" -->
+ * Flight websites could know where you're going when they load <!-- .element: class="fragment" -->
+ * News sites notice if you're into sports or politics <!-- .element: class="fragment" -->
+ * Social sites ask if you wanna broadcast a post <!-- .element: class="fragment" -->
  * One, floating shopping cart for all your shopping
 
 ---
 
 # Let's talk Security
 
-SubEtha uses a MessageChannel to communicate with the bridge, directly. |
+SubEtha uses a MessageChannel to communicate with the bridge, directly. <!-- .element: class="fragment" -->
 
-Bridges are (trusted) third party arbiters with control over whom joins a channel and the messages exchanged. |
+Bridges are (trusted) third party arbiters with control over whom joins a channel and the messages exchanged. <!-- .element: class="fragment" -->
 
 Clients can only receive and send known event types.
 
@@ -189,20 +193,20 @@ Clients can only receive and send known event types.
 
 # Technical Pivots
 
- * Started with localStorage events... |
- * Ending at [(shared) web-workers and IndexedDB](https://github.com/bemson/subetha-bridge/issues/5) |
- * Focus on eventual consistency, rather than latency |
- * Fluctuating browser support |
+ * Started with localStorage events...
+ * Ending at [(shared) web-workers and IndexedDB](https://github.com/bemson/subetha-bridge/issues/5) <!-- .element: class="fragment" -->
+ * Focus on eventual consistency, rather than latency <!-- .element: class="fragment" -->
+ * Fluctuating browser support <!-- .element: class="fragment" -->
 
 See the gruesome details and [lengthy discussion](https://github.com/bemson/subetha-bridge/issues/1), with [Dmitry Utkin](https://github.com/gothy), [Tom Jacques](https://github.com/tejacques) and [Vitaly Puzrin](https://github.com/puzrin).
 
 ---
 
-# Final Notes |
-
- * SubEtha is an abandoned alpha project. |
- * Updates are planned, but it's future is unclear. (The demo used to work in Chrome!) |
-
+# Final Notes
+<!-- .element: class="fragment" -->
+ * SubEtha is an abandoned alpha project.  <!-- .element: class="fragment" -->
+ * Updates are planned, but it's future is unclear. (The demo used to work in Chrome!) <!-- .element: class="fragment" -->
+<!-- .element: class="fragment" -->
 As with any external communication: **Only send want to share!**
 
 ---
