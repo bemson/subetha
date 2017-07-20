@@ -129,11 +129,11 @@ Met with [William Kapke-Wicks](https://github.com/williamkapke/), at [Oakland's 
 
 # Architecture
 
-SubEtha uses a _bridge_ to relay events amongst windows - an iframe, pointing to a shared domain. <!-- .element: class="fragment" -->
+SubEtha uses a "bridge" to relay events amongst windows - an iframe, pointing to a shared domain. <!-- .element: class="fragment" -->
 
-Each bridge observes and creates _localStorage events_ to stay in sync. <!-- .element: class="fragment" -->
+Each bridge observes and creates "localStorage events" to stay in sync. <!-- .element: class="fragment" -->
 
-Web pages communicate across bridges with _clients_, subscribed to the same arbitrary channel - similar to Slack and irc. <!-- .element: class="fragment" -->
+Web pages communicate across bridges with "clients", subscribed to the same arbitrary channel - similar to Slack and irc. <!-- .element: class="fragment" -->
 
 ---
 
@@ -179,7 +179,7 @@ _As of this presentation, the demos only work in Firefox..._ :-\\
  * Flight websites could know where you're going when they load <!-- .element: class="fragment" -->
  * News sites notice if you're into sports or politics <!-- .element: class="fragment" -->
  * Social sites ask if you wanna broadcast a post <!-- .element: class="fragment" -->
- * One, floating shopping cart for all your shopping
+ * One, floating shopping cart for all your shopping <!-- .element: class="fragment" -->
 
 ---
 
@@ -189,27 +189,27 @@ SubEtha uses a MessageChannel to communicate with the bridge, directly. <!-- .el
 
 Bridges are (trusted) third party arbiters with control over whom joins a channel and the messages exchanged. <!-- .element: class="fragment" -->
 
-Clients can only receive and send known event types.
+Clients can only receive and send known event types. <!-- .element: class="fragment" -->
 
 ---
 
 # Technical Pivots
 
- * Started with localStorage events...
+ * Started with localStorage events... <!-- .element: class="fragment" -->
  * Ending at [(shared) web-workers and IndexedDB](https://github.com/bemson/subetha-bridge/issues/5) <!-- .element: class="fragment" -->
  * Focus on eventual consistency, rather than latency <!-- .element: class="fragment" -->
  * Fluctuating browser support <!-- .element: class="fragment" -->
 
-See the gruesome details and [lengthy discussion](https://github.com/bemson/subetha-bridge/issues/1), with [Dmitry Utkin](https://github.com/gothy), [Tom Jacques](https://github.com/tejacques) and [Vitaly Puzrin](https://github.com/puzrin).
+See the gruesome details and [lengthy discussion](https://github.com/bemson/subetha-bridge/issues/1), with [Dmitry Utkin](https://github.com/gothy), [Tom Jacques](https://github.com/tejacques) and [Vitaly Puzrin](https://github.com/puzrin). <!-- .element: class="fragment" -->
 
 ---
 
 # Final Notes
-<!-- .element: class="fragment" -->
+
  * SubEtha is an abandoned alpha project.  <!-- .element: class="fragment" -->
  * Updates are planned, but it's future is unclear. (The demo used to work in Chrome!) <!-- .element: class="fragment" -->
 <!-- .element: class="fragment" -->
-As with any external communication: **Only send want to share!**
+ * As with any external communication: **Only send want to share!**
 
 ---
 
