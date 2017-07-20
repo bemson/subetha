@@ -13,16 +13,12 @@ github.com/bemson
 
 # What's an Event?
 
-<!-- .element: class="fragment" -->
+An _event_ is a message between systems. <!-- .element: class="fragment" -->
 
-An _event_ is a message between systems.
+The "system" could be anything: <!-- .element: class="fragment" -->
 
-<!-- .element: class="fragment" -->
-
-The "system" could be anything:
-
-  * Browsers to JavaScript
-  * Objects to objects
+  * Browsers to JavaScript <!-- .element: class="fragment" -->
+  * Objects to objects <!-- .element: class="fragment" -->
   * Clients to servers (e.g., xhrs)
 
 ---
