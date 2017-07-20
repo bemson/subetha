@@ -1,6 +1,6 @@
 # SubEtha:
 ## Domain-Free Events
-### (It's just a pipe!)
+### (It's just a pipe!) <!-- .element: class="fragment" -->
 ---
 
 # Who Am I?
@@ -13,7 +13,7 @@ github.com/bemson
 
 # What's an Event?
 
-An _event_ is a message between systems.
+An _event_ is a message between systems. <!-- .element: class="fragment" -->
 
 The "system" could be anything:
 
@@ -27,7 +27,7 @@ The "system" could be anything:
 
 A _domain_ is where your events occur.
 
-Withstanding sub-domains, there's only one per website.
+Withstanding sub-domains, there's only one per website. <!-- .element: class="fragment" -->
 
 ---
 
@@ -71,8 +71,8 @@ Example syntax:
 ```
 window.postMessage('Hello!', 'otherdomain.com');
 ```
-|
- * Requires a window reference|
+<!-- .element: class="fragment" -->
+ * Requires a window reference <!-- .element: class="fragment" -->
  * Heavy code coordination
 
 ---
