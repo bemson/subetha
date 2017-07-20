@@ -53,16 +53,16 @@ When data is accessible across accounts, users gain a more seamless web experien
 
 # Servers have many
 
-  * REST
-  * oAuth
-  * RPC (ugh)
-  * curl, ftp, gopher, etc...
+  * REST <!-- .element: class="fragment" -->
+  * oAuth <!-- .element: class="fragment" -->
+  * RPC (ugh) <!-- .element: class="fragment" -->
+  * curl, ftp, gopher, etc... <!-- .element: class="fragment" -->
 
 ---
 
 # Clients have few
 
-  * postMessage
+  * postMessage <!-- .element: class="fragment" -->
 
 ---
 
@@ -73,17 +73,17 @@ Example syntax:
 ```
 window.postMessage('Hello!', 'otherdomain.com');
 ```
-<!-- .element: class="fragment" -->
+
  * Requires a window reference <!-- .element: class="fragment" -->
- * Heavy code coordination
+ * Heavy code coordination <!-- .element: class="fragment" -->
 
 ---
 
 # Why so serious?
 
-Browsers have defensive same-origin policies that protect client and server communication. This is a _good_ thing.
+Browsers have defensive same-origin policies that protect client and server communication. <!-- .element: class="fragment" --> This is a _good_ thing. <!-- .element: class="fragment" -->
 
-Otherwise, free access between browser windows means free access between servers. That would be a _bad_ thing.
+Otherwise, free access between browser windows means free access between servers.  <!-- .element: class="fragment" -->That would be a _bad_ thing. <!-- .element: class="fragment" -->
 
 ---
 
@@ -91,7 +91,9 @@ Otherwise, free access between browser windows means free access between servers
 
 Users could encounter less friction from sharing data.
 
-> "Yes! My bread.com account automatically pulled _data_ from my peanut-butter.com and jelly.com accounts.
+---
+
+> "Yes, my bread.com account automatically pulled _data_ from my peanut-butter.com and jelly.com accounts!
 
 ---
 
@@ -104,16 +106,16 @@ Users could encounter less friction from sharing data.
 > An interstellar faster-than-light telecommunications network used by hitchhikers to flag down passing spaceships.
 > - [Hitchhiker's Guide to the Galaxy, on wikipedia.org](https://en.wikipedia.org/wiki/Technology_in_The_Hitchhiker%27s_Guide_to_the_Galaxy#Sub-Etha)
 
-(Thanks Douglas Adams!)
+(Thanks Douglas Adams!) <!-- .element: class="fragment" -->
 
 ---
 
 # Project goals
 
-  * Focus on the event, not the window
-  * Intrinsic security (e.g., build atop SOP)
-  * Easier than postMessage
-  * Robust publish/subscribe API
+  * Focus on the event, not the window <!-- .element: class="fragment" -->
+  * Intrinsic security (e.g., build atop SOP) <!-- .element: class="fragment" -->
+  * Easier than postMessage <!-- .element: class="fragment" -->
+  * Robust publish/subscribe API <!-- .element: class="fragment" -->
 
 ---
 
@@ -125,11 +127,11 @@ Met with [William Kapke-Wicks](https://github.com/williamkapke/), at [Oakland's 
 
 # Architecture
 
-SubEtha uses a _bridge_ to relay events amongst windows - an iframe, pointing to a shared domain.
+SubEtha uses a _bridge_ to relay events amongst windows - an iframe, pointing to a shared domain. <!-- .element: class="fragment" -->
 
-Each bridge observes and creates _localStorage events_ to stay in sync.
+Each bridge observes and creates _localStorage events_ to stay in sync. <!-- .element: class="fragment" -->
 
-Web pages communicate across bridges with _clients_, subscribed to the same arbitrary channel - similar to Slack and irc.
+Web pages communicate across bridges with _clients_, subscribed to the same arbitrary channel - similar to Slack and irc. <!-- .element: class="fragment" -->
 
 ---
 
