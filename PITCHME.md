@@ -209,7 +209,7 @@ See the gruesome details and [lengthy discussion](https://github.com/bemson/sube
  * SubEtha is an abandoned alpha project.  <!-- .element: class="fragment" -->
  * Updates are planned, but it's future is unclear. (The demo used to work in Chrome!) <!-- .element: class="fragment" -->
 <!-- .element: class="fragment" -->
- * As with any external communication: **Only send want to share!**
+ * As with any external communication: **Only send want to share!** <!-- .element: class="fragment" -->
 
 ---
 
